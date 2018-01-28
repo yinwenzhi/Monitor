@@ -4,22 +4,22 @@
 
 is_use_camera_device: true
 #first frame修改为自己的路径
-dataset_first: /home/emast/WorkSpace/programe/Monitor/dataset/logo/picture/11.jpg
+dataset_first: /home/emast/WorkSpace/programe/20200904Monitor/dataset/logo/picture/11.jpg
 
 #txtfile record dataset_images_list
-dataset_images_list: /home/emast/WorkSpace/programe/Monitor/dataset/logo/img.txt
+dataset_images_list: /home/emast/WorkSpace/programe/20200904Monitor/dataset/logo/img.txt
 
 #image stream 
-dataset_images: /home/emast/WorkSpace/programe/Monitor/dataset/logo/picture/
+dataset_images: /home/emast/WorkSpace/programe/20200904Monitor/dataset/logo/picture/
 
 #3d points
-dataset_3d: /home/emast/WorkSpace/programe/Monitor/dataset/logo/point2.txt
+dataset_3d: /home/emast/WorkSpace/programe/20200904Monitor/dataset/logo/point2.txt
 # camera intrinsics
 
-Camera.fx: 892.9
-Camera.fy: 894.2
-Camera.cx: 629.3
-Camera.cy: 341.4
+Camera.fx: 5059.9
+Camera.fy: 5055.1
+Camera.cx: 599.1741
+Camera.cy: 396.5086
 
 # fr2
 #camera.fx: 520.9
@@ -30,8 +30,8 @@ Camera.cy: 341.4
 # Stereo Rectification. Only if you need to pre-rectify the images.
 # Camera.fx, .fy, etc must be the same as in LEFT.P
 #--------------------------------------------------------------------------------------------
-height: 480
-width: 640
+height: 1024
+width: 1280
 D: !!opencv-matrix
    rows: 1
    cols: 5

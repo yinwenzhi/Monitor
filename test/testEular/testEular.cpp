@@ -24,15 +24,15 @@ Vec3f rotationMatrixToEulerAnglesXaYbZc(Mat &R)
     c = c*(180/3.1415926);
     return Vec3f(a, b, c);
 }
-cv::Vec3f  rotationMatrixToEulerAnglesZaYbXc(Mat &R){
+cv::Vec3f  rotationMatrixToEulerAnglesZYX(Mat &R){
     // float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
-    float sy = sqrt(R.at<double>(2,1) * R.at<double>(2,1) +  R.at<double>(2,2) * R.at<double>(2,2) );
-    bool singular = sy < 1e-6; // If
+    float Cosy = sqrt(R.at<double>(2,1) * R.at<double>(2,1) +  R.at<double>(2,2) * R.at<double>(2,2) );
+    bool singular = Cosy < 1e-6; // If
     float a, b, c;
     if (!singular) {
-        a = atan2(R.at<double>(1,0) , R.at<double>(0,0));
-        b = atan2(-R.at<double>(2,0), sy);
-        c = atan2(R.at<double>(2,1), R.at<double>(2,2));
+        a = atan2(R.at<double>(1,0) , R.at<double>(0,0)); //z
+        b = atan2(-R.at<double>(2,0), Cosy);  //y
+        c = atan2(R.at<double>(2,1), R.at<double>(2,2)); //x
     } else {
         a = atan2(R.at<double>(1,0) , R.at<double>(0,0));
         b = 0;
@@ -43,7 +43,7 @@ cv::Vec3f  rotationMatrixToEulerAnglesZaYbXc(Mat &R){
     c = c*(180/3.1415926);
     return Vec3f(a, b, c);
 }
-cv::Vec3f  rotationMatrixToEulerAnglesZaYbZc(Mat & R){
+cv::Vec3f  rotationMatrixToEulerAnglesZYZ(Mat & R){
     float S2 = sqrt(R.at<double>(2,0) * R.at<double>(2,0) +  R.at<double>(2,1) * R.at<double>(2,1) );
     bool ismin = S2 < 1e-6; // If
     float a, b, c;
@@ -51,7 +51,12 @@ cv::Vec3f  rotationMatrixToEulerAnglesZaYbZc(Mat & R){
         b = atan2(S2,R.at<double>(2,2));
         a = atan2(R.at<double>(1,2) , R.at<double>(0,2));
         c = atan2(R.at<double>(2,1), -R.at<double>(2,0));
-    } 
+    } else
+    {
+        a=0;
+        b = 0;
+        c = atan2(R.at<double>(2,1), -R.at<double>(2,0));
+    }
     a = a*(180/3.1415926);
     b = b*(180/3.1415926);
     c = c*(180/3.1415926);
@@ -70,7 +75,17 @@ int main(){
     R.at<double> ( 2,0 ) = -0.22839;
     R.at<double> ( 2,1 ) = 0.969;
     R.at<double> ( 2,2 ) = 0.08942;
-    // 
+    //  shu
+    // R.at<double> ( 0,0 ) = 0.9021;
+    // R.at<double> ( 0,1 ) = -0.3836;
+    // R.at<double> ( 0,2 ) = 0.1977;
+    // R.at<double> ( 1,0 ) = 0.3875;
+    // R.at<double> ( 1,1 ) = 0.9216;
+    // R.at<double> ( 1,2 ) = 0.0198;
+    // R.at<double> ( 2,0 ) = -0.1898;
+    // R.at<double> ( 2,1 ) = 0.0587;
+    // R.at<double> ( 2,2 ) = 0.9801;
+
     // R.at<double> ( 0,0 ) = 0.9021;
     // R.at<double> ( 0,1 ) = -0.3836;
     // R.at<double> ( 0,2 ) = 0.1977;
@@ -93,8 +108,8 @@ int main(){
     cv::Vec3f XYZ;
     XYZ = rotationMatrixToEulerAnglesXaYbZc(R);
     cout << " X-Y-Z:" << XYZ[0] << " " <<XYZ[1]  << " "  <<XYZ[2] << endl;
-    XYZ = rotationMatrixToEulerAnglesZaYbXc(R);
+    XYZ = rotationMatrixToEulerAnglesZYX(R);
     cout << " Z-Y-X: " << XYZ[0] << " " <<XYZ[1]  << " "  <<XYZ[2] << endl;
-    XYZ = rotationMatrixToEulerAnglesZaYbZc(R);
+    XYZ = rotationMatrixToEulerAnglesZYZ(R);
     cout << " Z-Y-Z: " << XYZ[0] << " " <<XYZ[1]  << " "  <<XYZ[2] << endl;;
 }
