@@ -1,3 +1,4 @@
+# how to  install vscode on ubuntu arm (tx2) optional
 install code 
 
 打开Chromiun
@@ -15,3 +16,10 @@ wget --content-disposition https://packagecloud.io/headmelted/codebuilds/package
 sudo dpkg -i code-oss_1.32.0-1550644676_arm64.deb
 
 安装完成
+
+# install opencv
+
+# install camerasdk
+bash ./install.sh
+
+# 
