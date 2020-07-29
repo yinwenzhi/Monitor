@@ -1,48 +1,14 @@
-#include "CameraApi.h" //相机SDK的API头文件
-
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include <stdio.h>
+#include "CameraDevice.h"
+#include <iostream>
 
 using namespace cv;
 
-unsigned char           * g_pRgbBuffer;     //处理后数据缓存区
-
-class Camera(){
-private:
-    int                     iCameraCounts = 1;
-    int                     iStatus=-1;
-    tSdkCameraDevInfo       tCameraEnumList;
-    int                     hCamera;
-    tSdkCameraCapbility     tCapability;      //设备描述信息
-    tSdkFrameHead           sFrameInfo;
-    BYTE*			        pbyBuffer;
-    int                     iDisplayFrames = 10000;
-    IplImage *iplImage = NULL;
-    int                     channel=3;
-
-public:
-
-
-
+Monitor::CameraDevice::CameraDevice(){
+    CameraSdkInit(1);
+    std::cout<< "相机SDK初始化成功"<< std::end;
 }
 
-int main()
-{
-
-    int                     iCameraCounts = 1;
-    int                     iStatus=-1;
-    tSdkCameraDevInfo       tCameraEnumList;
-    int                     hCamera;
-    tSdkCameraCapbility     tCapability;      //设备描述信息
-    tSdkFrameHead           sFrameInfo;
-    BYTE*			        pbyBuffer;
-    int                     iDisplayFrames = 10000;
-    IplImage *iplImage = NULL;
-    int                     channel=3;
-
-    CameraSdkInit(1);
-
+int Monitor::CameraDevice::ConnectDevice(){
     //枚举设备，并建立设备列表
     iStatus = CameraEnumerateDevice(&tCameraEnumList,&iCameraCounts);
 	printf("state = %d\n", iStatus);
@@ -50,6 +16,7 @@ int main()
 	printf("count = %d\n", iCameraCounts);
     //没有连接设备
     if(iCameraCounts==0){
+        std::cout<< "没有连接设备,请检查相机是否连接"<< std::end;
         return -1;
     }
 
@@ -59,6 +26,7 @@ int main()
     //初始化失败
 	printf("state = %d\n", iStatus);
     if(iStatus!=CAMERA_STATUS_SUCCESS){
+        std::cout<< "相机初始化失败"<< std::end;
         return -1;
     }
 
@@ -88,36 +56,36 @@ int main()
         channel=3;
         CameraSetIspOutFormat(hCamera,CAMERA_MEDIA_TYPE_BGR8);
     }
+    return 0;
+}
 
-
-    //循环显示1000帧图像
-    while(iDisplayFrames--)
-    {
-        if(CameraGetImageBuffer(hCamera,&sFrameInfo,&pbyBuffer,1000) == CAMERA_STATUS_SUCCESS)
-		{
-		    CameraImageProcess(hCamera, pbyBuffer, g_pRgbBuffer,&sFrameInfo);
-		    
-		    cv::Mat matImage(
-					cvSize(sFrameInfo.iWidth,sFrameInfo.iHeight), 
-					sFrameInfo.uiMediaType == CAMERA_MEDIA_TYPE_MONO8 ? CV_8UC1 : CV_8UC3,
-					g_pRgbBuffer
-					);
-			imshow("Opencv Demo", matImage);
-
-            waitKey(5);
-
-            //在成功调用CameraGetImageBuffer后，必须调用CameraReleaseImageBuffer来释放获得的buffer。
-			//否则再次调用CameraGetImageBuffer时，程序将被挂起一直阻塞，直到其他线程中调用CameraReleaseImageBuffer来释放了buffer
-			CameraReleaseImageBuffer(hCamera,pbyBuffer);
-
-		}
-    }
-
+Monitor::CameraDevice::~CameraDevice(){
     CameraUnInit(hCamera);
     //注意，现反初始化后再free
     free(g_pRgbBuffer);
-
-
-    return 0;
 }
+
+cv::Mat  Monitor::CameraDevice::GetImage(cv::Mat &image){
+    if(CameraGetImageBuffer(hCamera,&sFrameInfo,&pbyBuffer,1000) == CAMERA_STATUS_SUCCESS)
+    {
+        CameraImageProcess(hCamera, pbyBuffer, g_pRgbBuffer,&sFrameInfo);
+        
+        cv::Mat matImage(
+                cvSize(sFrameInfo.iWidth,sFrameInfo.iHeight), 
+                sFrameInfo.uiMediaType == CAMERA_MEDIA_TYPE_MONO8 ? CV_8UC1 : CV_8UC3,
+                g_pRgbBuffer
+                );
+        // std::cout << "showimage in get Image"<< std::endl;
+        // imshow("Opencv Demo", matImage);
+        image = matImage.clone();
+        // waitKey(5);
+
+        //在成功调用CameraGetImageBuffer后，必须调用CameraReleaseImageBuffer来释放获得的buffer。
+        //否则再次调用CameraGetImageBuffer时，程序将被挂起一直阻塞，直到其他线程中调用CameraReleaseImageBuffer来释放了buffer
+        CameraReleaseImageBuffer(hCamera,pbyBuffer);
+        return image;
+    }
+
+}
+
 

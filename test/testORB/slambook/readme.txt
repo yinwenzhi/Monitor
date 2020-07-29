@@ -6,3 +6,7 @@ mkdir build
 cd build
 cmake ..
 make 
+
+
+run :
+./feature_extract logo/logo-cap3.jpg logo_cap-4.png
