@@ -1,3 +1,5 @@
+#include "ORBmatcher.h"
+
 #include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -5,6 +7,7 @@
 
 using namespace std;
 using namespace cv;
+using namespace Monitor;
 
 int main ( int argc, char** argv )
 {
@@ -46,9 +49,15 @@ int main ( int argc, char** argv )
     //通过描述子匹配器，对两幅图像的描述子进行匹配，也就是将两幅图像中的对应特征点进行匹配；
     //输出的是一个DMatch结构体向量，其每一个DMatch结构体包含一组对应特征点的信息。
     vector<DMatch> matches;
+    
     //BFMatcher matcher ( NORM_HAMMING );
     matcher->match ( descriptors_1, descriptors_2, matches );
-
+    // 可以改为快速最近邻逼近搜索函数库(Fast Approximate Nearest Neighbor Search Library)  的高效匹配来进行实验
+    //-- Step 3: Matching descriptor vectors using FLANN matcher
+    // FlannBasedMatcher matcher;
+    // std::vector< DMatch > matches;
+    // matcher.match( descriptors_1, descriptors_2, matches );
+    
     //-- 第四步:匹配点对筛选
     double min_dist=10000, max_dist=0;
 
@@ -74,8 +83,17 @@ int main ( int argc, char** argv )
         if ( matches[i].distance <= max ( 1.5*min_dist, 30.0 ) )
         {
             good_matches.push_back ( matches[i] );
+            std::cout << "**********************************" << std::endl;
+            std::cout << "keypoints_1[matches[i].queryIdx].angle:" << keypoints_1[matches[i].queryIdx].angle << endl;
+            std::cout << "**********************************" << std::endl;
+            std::cout << "keypoints_2[matches[i].trainIdx].angle:" << keypoints_2[matches[i].queryIdx].angle << endl;
+            std::cout << "**********************************" << std::endl;
+            std::cout << descriptors_1 << std::endl;
         }
     }
+
+    ORBmatcher rotmatcher;
+    rotmatcher.DisBlogeByRot( keypoints_1, keypoints_2,  good_matches);
 
     //-- 第五步:绘制匹配结果
     Mat img_match;
