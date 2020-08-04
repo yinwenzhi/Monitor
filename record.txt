@@ -1,0 +1,24 @@
+https://blog.csdn.net/qq_37894023/article/details/85060047?utm_medium=distribute.pc_relevant.none-task-blog-baidujs-2&spm=1001.2101.3001.4242
+寻找已知物体检测博客。
+
+开启风扇
+sudo sh -c "echo 150 > /sys/devices/pwm-fan/target_pwm"
+
+# how to  install vscode on ubuntu arm (tx2) optional
+install code 
+
+打开Chromiun
+
+进入https://packagecloud.io/headmelted/codebuilds
+
+点击Packsges
+
+看右边列出来的包名
+
+后缀带有arm64(aarch64)的，点击查看wget命令
+
+wget --content-disposition https://packagecloud.io/headmelted/codebuilds/packages/debian/stretch/code-oss_1.32.0-1550644676_arm64.deb/download.deb
+
+sudo dpkg -i code-oss_1.32.0-1550644676_arm64.deb
+
+安装完成

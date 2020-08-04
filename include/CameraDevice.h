@@ -1,3 +1,6 @@
+#ifndef CAMERADEVICE_H
+#define CAMERADEVICE_H
+
 #include "CameraApi.h" //相机SDK的API头文件
 
 #include <opencv2/core/core.hpp>
@@ -29,3 +32,4 @@ namespace Monitor{
         
     }
 }
+#endif // CAMERADEVICE_H
