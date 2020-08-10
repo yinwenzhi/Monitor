@@ -1,16 +1,17 @@
-
-
 #ifndef CONFIG_H
 #define CONFIG_H
+#include <iostream>
+#include <string>
 #include "common_include.h"
 
-namespace myslam
+namespace Monitor
 {
     class Config
     {
     private:
         static std::shared_ptr<Config> config_;
         cv::FileStorage file_;
+        std::string filename_;
 
         Config () {} // private constructor makes a singleton
     public:
@@ -19,6 +20,8 @@ namespace myslam
         // set a new config file
         static void setParameterFile( const std::string& filename );
 
+        static std::shared_ptr<Config> getInstance();
+
         // access the parameter values
         template< typename T >
         static T get( const std::string& key )
@@ -26,5 +29,5 @@ namespace myslam
             return T( Config::config_->file_[key] );
         }
     };
-}
-#endif //STEREOVO_CONFIG_H
+}// namespace Monitor
+#endif //CONFIG_H
