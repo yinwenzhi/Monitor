@@ -1,0 +1,62 @@
+%YAML:1.0
+# data
+# the tum dataset directory, change it to yours! 
+
+#first frame修改为自己的路径
+dataset_first: /home/emast/WorkSpace/programe/Monitor/dataset/picture/11.jpg
+#image stream 
+dataset_images: /home/emast/WorkSpace/programe/Monitor/dataset/picture
+
+#3d points
+dataset_3d: /home/emast/WorkSpace/programe/Monitor/dataset/point2.txt
+# camera intrinsics
+
+Camera.fx: 892.9
+Camera.fy: 894.2
+Camera.cx: 629.3
+Camera.cy: 341.4
+
+# fr2
+#camera.fx: 520.9
+#camera.fy: 521.0
+#camera.cx: 325.1
+#camera.cy: 249.7
+#--------------------------------------------------------------------------------------------
+# Stereo Rectification. Only if you need to pre-rectify the images.
+# Camera.fx, .fy, etc must be the same as in LEFT.P
+#--------------------------------------------------------------------------------------------
+height: 480
+width: 640
+D: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data:[-0.28340811, 0.07395907, 0.00019359, 1.76187114e-05, 0.0]
+K: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [458.654, 0.0, 367.215, 0.0, 457.296, 248.375, 0.0, 0.0, 1.0]
+R:  !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [0.999966347530033, -0.001422739138722922, 0.008079580483432283, 0.001365741834644127, 0.9999741760894847, 0.007055629199258132, -0.008089410156878961, -0.007044357138835809, 0.9999424675829176]
+P:  !!opencv-matrix
+   rows: 3
+   cols: 4
+   dt: d
+   data: [435.2046959714599, 0, 367.4517211914062, 0,  0, 435.2046959714599, 252.2008514404297, 0,  0, 0, 1, 0]
+
+
+# VO Parameters
+#number_of_features: 800
+#scale_factor: 1.2
+#level_pyramid: 4
+#match_ratio: 2.0
+#max_num_lost: 10
+#min_inliers: 10
+#keyframe_rotation: 0.1
+#keyframe_translation: 0.1
+#map_point_erase_ratio: 0.5
+
