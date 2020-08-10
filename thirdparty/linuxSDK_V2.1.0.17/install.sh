@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# intall camera SDK
 CURDIR=`pwd`
 echo "Your current directory is $CURDIR. This is where the MVSDK software will be installed..."
 A=`whoami`
@@ -33,3 +34,5 @@ fi
 
 echo "Successful"
 echo "Please  restart system  now!!!"
+
+# compile Monitor

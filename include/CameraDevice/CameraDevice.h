@@ -8,7 +8,8 @@
 #include <stdio.h>  
 
 
-namespace Monitor{
+namespace Device
+{
 
     class CameraDevice
     {
@@ -17,19 +18,20 @@ namespace Monitor{
         int                     iStatus=-1;
         tSdkCameraDevInfo       tCameraEnumList;
         int                     hCamera;
-        tSdkCameraCapbility     tCapability;      //设备描述信息
+        tSdkCameraCapbility     tCapability;          //设备描述信息
         tSdkFrameHead           sFrameInfo;
         BYTE*			        pbyBuffer;
-        int                     iDisplayFrames = 10000;
+        // int                     iDisplayFrames = 10000;
         IplImage *iplImage = NULL;
         int                     channel=3;
 
-        unsigned char           * g_pRgbBuffer;     //处理后数据缓存区
+        unsigned char           * g_pRgbBuffer;      //处理后数据缓存区
     public:
         CameraDevice();
-        GetImage();
+        int ConnectDevice();
+        cv::Mat  GetImage(cv::Mat &image);
         ~CameraDevice();
         
-    }
+    };
 }
 #endif // CAMERADEVICE_H
