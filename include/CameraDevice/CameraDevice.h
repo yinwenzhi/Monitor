@@ -29,7 +29,7 @@ namespace Device
     public:
         CameraDevice();
         int ConnectDevice();
-        cv::Mat  GetImage(cv::Mat &image);
+        void  GetImage(cv::Mat &image);
         ~CameraDevice();
         
     };
