@@ -23,8 +23,9 @@ namespace Monitor
     public:
         Feature();
 
+        void GetKeyPoint(Mat img);
         void GetCrossPoint(Mat img);
-
+        void GetORBPoint(Mat img);
         // KeyPoints数量
 
 

@@ -69,7 +69,8 @@ namespace Monitor
         // 提取基准帧特征点
         // step1 提取特征点
         Monitor::Feature f;
-        f.GetCrossPoint(img1);
+        // f.GetCrossPoint(img1);
+        f.GetORBPoint(img1);
         vector<Point2f> corners1=f._corners;
 
         int idxnum1=corners1.size();
@@ -148,7 +149,7 @@ namespace Monitor
         cout<<"featurebeging"<<endl;
         Feature f;
         cout<<"getCrossbeging"<<endl;
-        f.GetCrossPoint(mcurr_->color_);//提取交点
+        f.GetKeyPoint(mcurr_->color_);  //提取交点
         KeyPoint::convert(f._corners, keypoints_curr_);//类型转换
         cout<<"keypoints_curr_.size()"<<keypoints_curr_.size()<<endl;
 
@@ -296,7 +297,7 @@ namespace Monitor
         std::cout << "R: " << std::endl << R << std::endl;
     }
 
-    void  Tracking:: bundleAdjustment (
+    void  Tracking::bundleAdjustment (
             const vector< Point3f > points_3d,
             const vector< Point2f > points_2d,
             const Mat& K,

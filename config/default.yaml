@@ -2,10 +2,15 @@
 # data
 # the tum dataset directory, change it to yours! 
 
+is_use_camera_device: true
 #first frame修改为自己的路径
 dataset_first: /home/emast/WorkSpace/programe/Monitor/dataset/picture/11.jpg
+
+#txtfile record dataset_images_list
+dataset_images_list: /home/emast/WorkSpace/programe/Monitor/dataset/img.txt
+
 #image stream 
-dataset_images: /home/emast/WorkSpace/programe/Monitor/dataset/picture
+dataset_images: /home/emast/WorkSpace/programe/Monitor/dataset/picture/
 
 #3d points
 dataset_3d: /home/emast/WorkSpace/programe/Monitor/dataset/point2.txt
