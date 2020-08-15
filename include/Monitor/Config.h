@@ -16,6 +16,7 @@ namespace Monitor
         Config () {} // private constructor makes a singleton
     public:
         ~Config();  // close the file when deconstructing
+        typedef shared_ptr<Config> Ptr;
 
         // set a new config file
         static void setParameterFile( const std::string& filename );

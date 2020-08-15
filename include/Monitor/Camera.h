@@ -27,8 +27,7 @@ namespace Monitor
     public:
         Camera(std::shared_ptr<Monitor::Config>  ConfigInstance);
         Camera( float fx, float fy, float cx, float cy) :
-                fx_ ( fx ), fy_ ( fy ), cx_ ( cx ), cy_ ( cy )
-        {}
+                fx_ ( fx ), fy_ ( fy ), cx_ ( cx ), cy_ ( cy ){}
 
         // coordinate transform: world, camera, pixel
         // Vector3d world2camera( const Vector3d& p_w, const SE3& T_c_w );

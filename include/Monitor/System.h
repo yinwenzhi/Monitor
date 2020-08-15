@@ -50,17 +50,15 @@ public:
     // Proccess the given monocular frame
     // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
     // Returns the camera pose (empty if tracking fails).
-    cv::Mat TrackMonocular(const cv::Mat &im, const double &timestamp);
+    void TrackMonocular(const cv::Mat &im, const double &timestamp);
 
-  
-
+    Vec3f getcameraangle();
+    Vector3d getcameratransition();
+    vector<cv::KeyPoint> getkeypoints();
     // All threads will be requested to finish.
     // It waits until all threads have finished.
     // This function must be called before saving the trajectory.
     void Shutdown();
-
-
-
 
     // TODO: Save/Load functions
     // SaveMap(const string &filename);
@@ -73,16 +71,14 @@ public:
     // std::vector<cv::KeyPoint> GetTrackedKeyPointsUn();
 
 private:
-    std::shared_ptr<Monitor::Config>  mpConfig;
     // Tracker. It receives a frame and computes the associated camera pose.
     // It also decides when to insert a new keyframe, create some new MapPoints and
     // performs relocalization if tracking fails.
-    Tracking* mpTracker;
-    Camera * mpCamera;
+    Tracking::Ptr mpTracker;
+    Config::Ptr  mpConfig;
+    Camera::Ptr mpCamera;
     // Local Mapper. It manages the local map and performs local bundle adjustment.
     // LocalMapping* mpLocalMapper;
-
-
 
     // System threads: Local Mapping, Loop Closing, Viewer.
     // The Tracking thread "lives" in the main execution thread that creates the System object.

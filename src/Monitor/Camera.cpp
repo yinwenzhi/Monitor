@@ -19,7 +19,7 @@ namespace Monitor
     // }
     Camera::Camera(std::shared_ptr<Monitor::Config>  ConfigInstance){
         fx_ = ConfigInstance->get<float>("Camera.fx");
-        fx_ = ConfigInstance->get<float> ("dataset_first");
+        // fx_ = ConfigInstance->get<float> ("dataset_first");
         fy_ = ConfigInstance->get<float>("Camera.fy");
         cx_ = ConfigInstance->get<float>("Camera.cx");
         cy_ = ConfigInstance->get<float>("Camera.cy");

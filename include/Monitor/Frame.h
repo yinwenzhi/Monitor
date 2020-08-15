@@ -27,6 +27,7 @@ public:
 public: // data members
     Frame();
     // Frame( long id, double time_stamp=0, SE3 T_c_w=SE3(), Camera::Ptr camera=nullptr, Mat color=Mat() );
+    Frame( long id, double time_stamp=0);
     ~Frame();
 
     static Frame::Ptr createFrame();

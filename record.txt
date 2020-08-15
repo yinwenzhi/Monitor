@@ -22,3 +22,120 @@ wget --content-disposition https://packagecloud.io/headmelted/codebuilds/package
 sudo dpkg -i code-oss_1.32.0-1550644676_arm64.deb
 
 安装完成
+
+compile：
+ywz 20200804:
+第一次尝试编译：
+Could not find a package configuration file provided by "Pangolin" with any
+  of the following names:
+
+    PangolinConfig.cmake
+    pangolin-config.cmake
+
+拷贝以前的pangolin文件，进行编译安装
+按照pangolin项目readme文件进行安装
+cmake -DCMAKE_INSTALL_PREFIX=/home/emast/WorkSpace/lib/pangolin
+编译安装后问题解决
+
+第二次编译：
+错误
+-- Could NOT find CSPARSE (missing: CSPARSE_INCLUDE_DIR CSPARSE_LIBRARY) 
+CMake Error: The following variables are used in this project, but they are set to NOTFOUND.
+Please set them or make sure they are set and tested correctly in the CMake files:
+CSPARSE_INCLUDE_DIR
+
+解决方案：
+
+运行 sudo apt-get install libsuitesparse-dev 安装相关依赖包。
+
+
+第三次编译：
+错误
+error: no matching function for call to 'g2o::BlockSolver<g2o::BlockSolverTraits<6, 3> >::BlockSolver(g2o::BlockSolver<g2o::BlockSolverTraits<6, 3> >::LinearSolverType*&)'
+      Block* solver_ptr = new Block ( linearSolver );     // 矩阵块求解器
+应该是g2o版本更新导致用法变化的问题
+
+参考博客更改代码 https://blog.csdn.net/robinhjwy/article/details/78084210
+主要是更改了g2o的接口使用代码 PointMatch.cpp中
+############
+        // 初始化g2o
+        typedef g2o::BlockSolver< g2o::BlockSolverTraits<6,3> > Block;  // pose 维度为 6, landmark 维度为 3
+        // Block::LinearSolverType* linearSolver = new g2o::LinearSolverCSparse<Block::PoseMatrixType>(); // 线性方程求解器
+        // g2o接口更改
+        std::unique_ptr<Block::LinearSolverType> linearSolver ( new g2o::LinearSolverCSparse<Block::PoseMatrixType>());
+
+        // Block* solver_ptr = new Block ( linearSolver );     // 矩阵块求解器
+        // g2o接口更改
+        std::unique_ptr<Block> solver_ptr ( new Block ( std::move(linearSolver)));     // 矩阵块求解器
+
+        // g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg ( solver_ptr );
+        // g2o接口更改
+        g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg ( std::move(solver_ptr));
+###############
+
+第四次编译 错误：
+../lib/libUAV_PROJECT.so: undefined reference to `g2o::csparse_extension::cs_chol_workspace(cs_di_sparse const*, cs_di_symbolic const*, int*, double*)'
+../lib/libUAV_PROJECT.so: undefined reference to `g2o::csparse_extension::cs_cholsolsymb(cs_di_sparse const*, double*, cs_di_symbolic const*, double*, int*)'
+../lib/libUAV_PROJECT.so: undefined reference to `g2o::csparse_extension::writeCs2Octave(char const*, cs_di_sparse const*, bool)'
+collect2: error: ld returned 1 exit status
+
+ld 错误 ，说明编译通过，主要是链接错误 可能是由于 安装g2o的时候没有安装csparse以来，需要重新编译一下g2o
+解决方法：把g2o源码里的build先删掉，然后重新编译g2o，即安装了libsuitesparse后要重新编译g2o，可能需要重复上述操作两次以上，我重新编译了一次，ch7的程序make还是出错，再来一次就成功了。
+sudo rm -r /usr/local/include/g2o
+sudo rm -r /usr/local/lib/libg2o*
+sudo rm -r /usr/local/bin/g2o*
+
+第五次编译 错误没有变化：
+../lib/libUAV_PROJECT.so: undefined reference to `g2o::csparse_extension::cs_chol_workspace(cs_di_sparse const*, cs_di_symbolic const*, int*, double*)'
+../lib/libUAV_PROJECT.so: undefined reference to `g2o::csparse_extension::cs_cholsolsymb(cs_di_sparse const*, double*, cs_di_symbolic const*, double*, int*)'
+../lib/libUAV_PROJECT.so: undefined reference to `g2o::csparse_extension::writeCs2Octave(char const*, cs_di_sparse const*, bool)'
+collect2: error: ld returned 1 exit status
+CMakeFiles/uav.dir/build.make:153: recipe for target '../bin/uav' failed
+make[2]: *** [../bin/uav] Error 1
+CMakeFiles/Makefile2:104: recipe for target 'CMakeFiles/uav.dir/all' failed
+make[1]: *** [CMakeFiles/uav.dir/all] Error 2
+Makefile:83: recipe for target 'all' failed
+make: *** [all] Error 2
+
+重新编译g2o 
+过程中确认
+A library with LAPACK API found.
+-- Found CHOLMOD and its dependencies
+-- Found CSPARSE: /usr/include/suitesparse  
+-- Found OpenGL: /usr/lib/aarch64-linux-gnu/libOpenGL.so 
+
+第六次编译 成功！！！！
+
+运行时有个别图片报错
+删除23 27 31 图片
+
+
+
+设置g2o 
+第一种方法：
+在FindG2O.cmake 的 FindPATH中添加
+/home/emast/WorkSpace/lib/g2o/include
+
+第二种方法：
+在CMAKELISTS.TXT中添加
+list( APPEND CMAKE_MODULE_PATH /home/emast/WorkSpace/install/g2o/cmake_modules)
+set(G2O_ROOT /home/emast/WorkSpace/lib/g2o/) 
+
+
+
+编译问题：
+No rule to make target '/usr/lib/aarch64-linux-gnu/libGL.so', needed by '../lib/libMonitor_PROJECT.so'.  Stop.
+解决方案：
+https://blog.csdn.net/moyu123456789/article/details/106361544
+1.从github中https://github.com/NVIDIA/libglvnd路径下载libglvnd。
+
+按照其中的readme进行编译，最后执行sudo make install进行安装。
+
+2.对出错的库文件进行更新（软连接指向新安装的库文件）
+
+安装后，会在/usr/local/lib/下出现libGL.so库文件，此时进入/usr/lib/gcc/aarch64-linux-gnu/目录，执行一下操作：
+
+sudo rm libGL.so
+
+sudo ln -s /usr/local/lib/libGL.so libGL.so 
+

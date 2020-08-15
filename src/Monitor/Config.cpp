@@ -28,7 +28,7 @@ namespace Monitor
     {
         if ( file_.isOpened() ){
             file_.release();
-            std::cout << " file_ released.";
+            std::cout << "setting file_ released."<< std::endl;
         }
 
     }
