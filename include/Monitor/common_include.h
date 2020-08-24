@@ -21,6 +21,7 @@ using namespace cv;
 // std 
 // #include <vector>
 // #include <list>
+#include <map>
 #include <memory>
 // #include <string>
 // #include <iostream>

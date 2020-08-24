@@ -54,7 +54,10 @@ public:
 
     Vec3f getcameraangle();
     Vector3d getcameratransition();
+    Tracking::Ptr getTracker();
     vector<cv::KeyPoint> getkeypoints();
+    vector<cv::KeyPoint> getCurKeyPoints();
+    vector<cv::KeyPoint> getRefKeyPoints();
     // All threads will be requested to finish.
     // It waits until all threads have finished.
     // This function must be called before saving the trajectory.
