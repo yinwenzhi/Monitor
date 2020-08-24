@@ -190,39 +190,41 @@ namespace Monitor
 
         //计算当前帧位姿
         Mat R,t;
-        pose_estimation_3d2d(feature_matches_,R, t  );
-        //筛选匹配到的当前帧的特征点和描述子，
-        Mat desp_tem;
-        vector<cv::KeyPoint> kp_temp;
-        vector< Point3f >  temp_3d=pts_3d_;
-        pts_3d_.clear();
-        for ( size_t i=0; i<keypoints_curr_.size(); i++ )
-        {
-            for (size_t m = 0; m < feature_matches_.size(); m++)
-            {
-                if(i==feature_matches_[m].trainIdx)
-                {
-                    cv::Point3f pp1;
-                    pp1=temp_3d[feature_matches_[m].queryIdx];
-                    // cout<<"pp1.p3= "<<pp1.p3<<endl;
-                    pts_3d_.push_back(pp1);
-                    desp_tem.push_back(descriptors_curr_.row(i).clone());
-                    kp_temp.push_back(keypoints_curr_[i]);
-                }
-                else
-                {
-                    continue;
-                }
-            }
+        if(!pose_estimation_3d2d(feature_matches_,R, t)){
+            return false;
         }
+        //筛选匹配到的当前帧的特征点和描述子，
+        // Mat desp_tem;
+        // vector<cv::KeyPoint> kp_temp;
+        // vector< Point3f >  temp_3d=pts_3d_;
+        // pts_3d_.clear();
+        // for ( size_t i=0; i<keypoints_curr_.size(); i++ )
+        // {
+        //     for (size_t m = 0; m < feature_matches_.size(); m++)
+        //     {
+        //         if(i==feature_matches_[m].trainIdx)
+        //         {
+        //             cv::Point3f pp1;
+        //             pp1=temp_3d[feature_matches_[m].queryIdx];
+        //             // cout<<"pp1.p3= "<<pp1.p3<<endl;
+        //             pts_3d_.push_back(pp1);
+        //             // desp_tem.push_back(descriptors_curr_.row(i).clone());
+        //             kp_temp.push_back(keypoints_curr_[i]);
+        //         }
+        //         else
+        //         {
+        //             continue;
+        //         }
+        //     }
+        // }
         feature_matches_.clear();
         descriptors_curr_.release();
         // keypoints_curr_.clear();
-        descriptors_ref_=desp_tem;
+        // descriptors_ref_=desp_tem; // 注释原因：不更新参考帧 所以也不更新描述子 
 
-        // 并将当前帧设为参考帧
-        mref_ = mcurr_;
-        desp_tem.release();
+        // 并将当前帧设为参考帧  
+        // mref_ = mcurr_;
+        // desp_tem.release(); // 注释原因：取消更新参考帧，因为定位Logo 的相机移动并不大。
 
         cout<<"match cost time: "<<timer.elapsed()<<endl;
         return true;
@@ -266,7 +268,7 @@ namespace Monitor
         cout<<"match cost time: "<<timer.elapsed()<<endl;
     }
 
-    void Tracking:: pose_estimation_3d2d (std::vector< DMatch > matches,Mat& R, Mat& t )
+    bool Tracking:: pose_estimation_3d2d (std::vector< DMatch > matches,Mat& R, Mat& t )
     {
         cout<<"ref_->pts_3d_ref_.size:"<<pts_3d_.size()<<endl;
         //Mat K = f_cur.camera_->K;
@@ -278,14 +280,17 @@ namespace Monitor
             Point3f p1 = pts_3d_[m.queryIdx];
             pts_3d.push_back (p1);
             pts_2d.push_back ( keypoints_curr_[m.trainIdx].pt );
-            cout<<"m.trainIdx= "<<m.trainIdx<<endl;
-            cout<<"m.queryIdx= "<<m.queryIdx<<endl;
+            cout<<"m.trainIdx= "<<m.trainIdx<<endl; // ref
+            cout<<"m.queryIdx= "<<m.queryIdx<<endl; // cur
             cout<<"3d= "<<p1<<endl;
             cout<<"2d= "<<keypoints_curr_[m.trainIdx].pt<<endl;
         }
 
-        cout<<"3d-2d pairs: "<<pts_3d.size() << endl;
-
+        
+        if(pts_3d.size()<4) {
+            return false;
+            cout<<"3d-2d pairs  "<<pts_3d.size() << " < 4 , skip this frame." << endl;
+        }
         // solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, SOLVEPNP_EPNP ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
         solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, CV_ITERATIVE ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
 
@@ -295,6 +300,7 @@ namespace Monitor
         // cout<<"t="<<endl<<t<<endl;
         bundleAdjustment ( pts_3d, pts_2d, K, R, t );
         std::cout << "R: " << std::endl << R << std::endl;
+        return true;
     }
 
     void  Tracking::bundleAdjustment (
@@ -367,7 +373,7 @@ namespace Monitor
         }
 
         chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
-        optimizer.setVerbose ( true );
+        // optimizer.setVerbose ( true );
         optimizer.initializeOptimization();
         optimizer.optimize ( 100 );
         chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
@@ -381,16 +387,17 @@ namespace Monitor
         Eigen::Vector3d trans=tt.block(0,3,3,1);
         // Eigen::Vector3d trans=tt.block(0,3,3,0);
         // Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> trans=tt.block(0,3,3,1);
-        std::cout << "rotation: " << std::endl << rotation << std::endl;
-        std::cout << "trans: " << std::endl << trans<< std::endl;
+        // std::cout << "rotation: " << std::endl << rotation << std::endl;
+        // std::cout << "trans: " << std::endl << trans<< std::endl;
         Mat rotation1;
         cv::eigen2cv(rotation,rotation1);
         angle_= rotationMatrixToEulerAngles(rotation1);
         translation_=trans;
         
         cout<<"angle: "<<angle_<<endl;
-        cout<<"translation_ : "<<translation_<<endl;
-        cout<<endl<<"after optimization:"<<endl;
-        cout<<"T="<<endl<<Eigen::Isometry3d ( pose->estimate() ).matrix() <<endl;
+        // cout << "size of translation_: " << translation_.size()<< endl;
+        cout<<"translation_ : "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
+        // cout<<endl<<"after optimization:"<<endl;
+        // cout<<"T="<<endl<<Eigen::Isometry3d ( pose->estimate() ).matrix() <<endl;
     }
 }//namespace Monitor

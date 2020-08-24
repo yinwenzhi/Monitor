@@ -71,7 +71,7 @@ namespace Monitor
         bool AddFrame( Frame::Ptr frame );      // add a new frame
         void computeDescriptors();
         void featureMatching();
-        void pose_estimation_3d2d ( std::vector< DMatch > matches,Mat& R, Mat& t );
+        bool pose_estimation_3d2d ( std::vector< DMatch > matches,Mat& R, Mat& t );
         void bundleAdjustment (
                 const vector< Point3f > points_3d,
                 const vector< Point2f > points_2d,

@@ -76,7 +76,6 @@ void System::TrackMonocular(const cv::Mat &im, const double &timestamp)
         cout<<"AddFrame end"<<endl;
     #endif
     // AddFrame(mCurrentFrame);
-
 }
 
 Vec3f System::getcameraangle(){
