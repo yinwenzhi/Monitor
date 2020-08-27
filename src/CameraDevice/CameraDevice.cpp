@@ -8,6 +8,50 @@ Device::CameraDevice::CameraDevice(){
     std::cout<< "相机SDK初始化成功"<< std::endl;
 }
 
+
+
+// offsetx, offsety, width, height: 偏移宽高都选取为16的倍数兼容性最好（不同的相机对这个的要求不同，有的只需要2的倍数，有的可能需要16的倍数）
+// offsetx, offsety, width, height: offset width and height are all chosen to be 16 times the best compatibility (different cameras have different requirements for this, some need only a multiple of 2, some may require a multiple of 16)
+int SetCameraResolution(CameraHandle hCamera ,int offsetx, int offsety, int width, int height)
+{
+    tSdkImageResolution sRoiResolution = { 0 };
+
+    // 设置成0xff表示自定义分辨率，设置成0到N表示选择预设分辨率
+    // Set to 0xff for custom resolution, set to 0 to N for select preset resolution
+    sRoiResolution.iIndex = 0xff;
+
+    // iWidthFOV表示相机的视场宽度，iWidth表示相机实际输出宽度
+    // 大部分情况下iWidthFOV=iWidth。有些特殊的分辨率模式如BIN2X2：iWidthFOV=2*iWidth，表示视场是实际输出宽度的2倍
+    // iWidthFOV represents the camera's field of view width, iWidth represents the camera's actual output width
+    // In most cases iWidthFOV=iWidth. Some special resolution modes such as BIN2X2:iWidthFOV=2*iWidth indicate that the field of view is twice the actual output width
+    sRoiResolution.iWidth = width;
+    sRoiResolution.iWidthFOV = width;
+
+    // 高度，参考上面宽度的说明
+    // height, refer to the description of the width above
+    sRoiResolution.iHeight = height;
+    sRoiResolution.iHeightFOV = height;
+
+    // 视场偏移
+    // Field of view offset
+    sRoiResolution.iHOffsetFOV = offsetx;
+    sRoiResolution.iVOffsetFOV = offsety;
+
+    // ISP软件缩放宽高，都为0则表示不缩放
+    // ISP software zoom width and height, all 0 means not zoom
+    sRoiResolution.iWidthZoomSw = 0;
+    sRoiResolution.iHeightZoomSw = 0;
+
+    // BIN SKIP 模式设置（需要相机硬件支持）
+    // BIN SKIP mode setting (requires camera hardware support)
+    sRoiResolution.uBinAverageMode = 0;
+    sRoiResolution.uBinSumMode = 0;
+    sRoiResolution.uResampleMask = 0;
+    sRoiResolution.uSkipMode = 0;
+
+    return CameraSetImageResolution(hCamera, &sRoiResolution);
+}
+
 int Device::CameraDevice::ConnectDevice(){
     //枚举设备，并建立设备列表
     iStatus = CameraEnumerateDevice(&tCameraEnumList,&iCameraCounts);
@@ -56,6 +100,14 @@ int Device::CameraDevice::ConnectDevice(){
         channel=3;
         CameraSetIspOutFormat(hCamera,CAMERA_MEDIA_TYPE_BGR8);
     }
+
+    SetCameraResolution(hCamera, 904, 520, 1280, 1024);
+
+    CameraGetImageResolution(hCamera,&pImageResolution);
+    std::cout << "iwidth: " << pImageResolution.iWidth
+        << " iHeight: " << pImageResolution.iHeight << std::endl;
+        
+
     return 0;
 }
 

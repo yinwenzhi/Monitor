@@ -78,6 +78,10 @@ void System::TrackMonocular(const cv::Mat &im, const double &timestamp)
     // AddFrame(mCurrentFrame);
 }
 
+Monitor::Tracking::Ptr System::getTracker(){
+    return mpTracker ;
+}
+
 Vec3f System::getcameraangle(){
     return mpTracker->angle_;      // 欧拉角
 }
@@ -85,8 +89,12 @@ Vector3d System::getcameratransition(){
     return mpTracker->translation_;
 }
 
-vector<cv::KeyPoint> System::getkeypoints(){
+vector<cv::KeyPoint> System::getCurKeyPoints(){
     return mpTracker-> keypoints_curr_;
+}
+
+vector<cv::KeyPoint> System::getRefKeyPoints(){
+    return mpTracker-> keypoints_ref_;
 }
 
 
