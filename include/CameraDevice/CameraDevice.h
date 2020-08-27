@@ -19,6 +19,7 @@ namespace Device
         tSdkCameraDevInfo       tCameraEnumList;
         int                     hCamera;
         tSdkCameraCapbility     tCapability;          //设备描述信息
+        tSdkImageResolution     pImageResolution;     // 分辨率
         tSdkFrameHead           sFrameInfo;
         BYTE*			        pbyBuffer;
         // int                     iDisplayFrames = 10000;

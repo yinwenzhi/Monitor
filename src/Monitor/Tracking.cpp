@@ -66,26 +66,29 @@ namespace Monitor
     bool Tracking::InitFrame(string imgPath){
 
         Mat img1 = imread(imgPath, 1);
+        // Mat reverse ;
+        // transpose(img1, reverse);
+        // img1 = reverse.clone();
         // 提取基准帧特征点
         // step1 提取特征点
         Monitor::Feature f;
         // f.GetCrossPoint(img1);
-        f.GetORBPoint(img1);
+        // f.GetORBPoint(img1);
+        f.GetKeyPoint(img1);  //提取特征点，使用GetKeyPoint来保证当前真和参考帧相统一
         vector<Point2f> corners1=f._corners;
 
         int idxnum1=corners1.size();
         cout<<"num of first img's corners is :"<<idxnum1<<endl;
-        // //类型转换
-        vector<KeyPoint> keypoints1(idxnum1);
-        KeyPoint::convert(corners1, keypoints1);
+        // 类型转换
+        vector<KeyPoint> keypoints_all(idxnum1);
+        KeyPoint::convert(corners1, keypoints_all);
 
         // step2计算描述子
-
-        Mat descriptors_1;
+        Mat descriptors_all;
         cv::Ptr<DescriptorExtractor> descriptor = ORB::create();
         //Ptr<DescriptorMatcher> matcher  = DescriptorMatcher::create ( "BruteForce-Hamming" );
-        descriptor->compute (img1, keypoints1, descriptors_1 );
-        cout<<"descriptors_1 :"<<descriptors_1.size()<<endl;
+        descriptor->compute (img1, keypoints_all, descriptors_all );
+        cout<<"descriptors_all :"<<descriptors_all.size()<<endl;
         
         // step3创建基准帧
         Monitor::Frame::Ptr pF_ini = Monitor::Frame::createFrame();
@@ -96,28 +99,37 @@ namespace Monitor
         // //  读入基准帧的3D点坐标（夹板坐标系下）
         vector<KeyPoint> keypoints;//和3d点对应的特征点
         Mat descriptors;//和3d点对应的描述子
-        // //从文档中读取3D坐标
+        // 从文档中读取3D坐标
         string str_3d = Monitor::Config::get<string> ( "dataset_3d" );
         cout<<"dataset: "<<str_3d<<endl;
-        size_t num;
+        int num;
         int x,y,z;
-        for ( size_t i=0; i<keypoints1.size(); i++ )
+        
+        for ( int i=0; i<keypoints_all.size(); i++ )
         {
             ifstream myfile(str_3d);
             if (!myfile.is_open()) {
                 cout << "can not open this file" << endl;
             }
+            int width , height;
+            int pixX, pixY;
+            myfile>> width >> height;
+            myfile>> pixX >> pixY;
             while(myfile>>num>>x>>y>>z)
             {
+                if(z==-1) continue; // ！z = -1 的点是无效的点
                 if(i==num)
                 {
                     Point3f p_world;
-                    p_world.x=x;
-                    p_world.y=y;
-                    p_world.z=z;
-                    pF_ini->pts_3d_ref_.push_back(p_world);
-                    keypoints.push_back(keypoints1[i]);
-                    descriptors.push_back(descriptors_1.row(i).clone());
+                    p_world.x= (x- (pixX%2) == 0 ? (pixX/2) : (pixX/2 +1))*width/pixX ;
+                    p_world.y= (y- (pixY%2) == 0 ? (pixY/2) : (pixX/2 +1))*height/pixY ;
+                    p_world.z= 0 ;
+                    
+                    //pF_ini->pts_3d_ref_.push_back(p_world);
+                    pF_ini->pts_3d_ref_[num] = p_world; // 改为map 容易根据序号提取3d点
+                    keypoints.push_back(keypoints_all[i]);
+                    descriptors.push_back(descriptors_all.row(i).clone());
+                    break;
                 }
                 else
                 {
@@ -133,7 +145,10 @@ namespace Monitor
 
         // 设置Tracking 属性
         Tracking::pts_3d_=pF_ini->pts_3d_ref_;
-        Tracking::descriptors_ref_=descriptors;
+        Tracking::keypoints_ref_ = keypoints;
+        Tracking::keypoints_all_ref_ = keypoints_all;
+        Tracking::descriptors_ref_ = descriptors; // ref 3d坐标 keypoint
+        Tracking::descriptors_all_ref_ = descriptors_all; // ref all keyp
         Tracking::mref_=pF_ini;
         return true;
     }
@@ -149,7 +164,7 @@ namespace Monitor
         cout<<"featurebeging"<<endl;
         Feature f;
         cout<<"getCrossbeging"<<endl;
-        f.GetKeyPoint(mcurr_->color_);  //提取交点
+        f.GetKeyPoint(mcurr_->color_);  //提取特征点
         KeyPoint::convert(f._corners, keypoints_curr_);//类型转换
         cout<<"keypoints_curr_.size()"<<keypoints_curr_.size()<<endl;
 
@@ -161,12 +176,15 @@ namespace Monitor
         //当前帧提取描述子
         descriptor->compute ( mcurr_->color_, keypoints_curr_, descriptors_curr_ );
         cv::Ptr<DescriptorMatcher> matcher  = DescriptorMatcher::create ( "BruteForce-Hamming" );
-        matcher->match ( descriptors_ref_, descriptors_curr_, match );
+        // 第一步 使用 keypoints_all_ref_ 匹配
+        matcher->match ( descriptors_all_ref_, descriptors_curr_, match );
+        // 使用 keypoints_all_ref_ 匹配
+        // matcher->match ( descriptors_ref_, descriptors_curr_, match );
         cout<<"match.size()= "<<match.size()<<endl;
 
         double min_dist=10000, max_dist=0;
         //找出所有匹配之间的最小距离和最大距离, 即是最相似的和最不相似的两组点之间的距离
-        for ( int i = 0; i < descriptors_ref_.rows; i++ )
+        for ( int i = 0; i < match.size(); i++ ) // 应该使用match的数量 而不是descriptors_res_ 的大小
             // for ( int i = 0; i < descriptors_1.rows; i++ )
         {
             double dist = match[i].distance;
@@ -177,16 +195,66 @@ namespace Monitor
         printf ( "-- Max dist : %f \n", max_dist );
         printf ( "-- Min dist : %f \n", min_dist );
 
+        feature_matches_.clear(); //featurematch 信息要用来绘制匹配图
         //当描述子之间的距离大于两倍的最小距离时,即认为匹配有误.但有时候最小距离会非常小,设置一个经验值30作为下限.
-        for ( int i = 0; i < descriptors_ref_.rows; i++ )
+        // for ( int i = 0; i < descriptors_ref_.rows; i++ )
+        for ( int i = 0; i < match.size(); i++ )
         {
-            if ( match[i].distance <= max ( 2*min_dist, 30.0 ) )
+            // feature_matches_.push_back ( match[i] );
+            if ( match[i].distance <= max ( 1.5*min_dist, 30.0 ) )
             {
                 feature_matches_.push_back ( match[i] );
             }
         }
         cout<<"matches.size()= "<<feature_matches_.size()<<endl;
-    //    featureMatching();
+
+        // 第二步：使用主方向进行删除匹配点对
+        ORBmatcher rotmatcher;
+        rotmatcher.DisBlogeByRot( keypoints_all_ref_, keypoints_curr_,  feature_matches_);
+
+        // 第三部： 
+
+        // 使用ransac
+        vector<Point2f> srcPoints(feature_matches_.size()),dstPoints(feature_matches_.size());
+        //保存从关键点中提取到的匹配点对的坐标
+        for(int i=0;i<feature_matches_.size();i++)
+        {
+            srcPoints[i]=keypoints_all_ref_[feature_matches_[i].queryIdx].pt;
+            dstPoints[i]=keypoints_curr_[feature_matches_[i].trainIdx].pt;
+        }
+        //保存计算的单应性矩阵
+        Mat homography;
+        //保存点对是否保留的标志
+        vector<unsigned char> inliersMask1(srcPoints.size());
+        //匹配点对进行RANSAC过滤
+        homography = findHomography(srcPoints,dstPoints,CV_RANSAC,5,inliersMask1);
+        //RANSAC过滤后的点对匹配信息
+        vector<DMatch> matches_ransac;
+        //手动的保留RANSAC过滤后的匹配点对
+        for(int i=0;i<inliersMask1.size();i++)
+        {
+            if(inliersMask1[i])
+            {
+                matches_ransac.push_back(feature_matches_[i]);
+                //cout<<"第"<<i<<"对匹配："<<endl;
+                //cout<<"queryIdx:"<<matches[i].queryIdx<<"\ttrainIdx:"<<matches[i].trainIdx<<endl;
+                //cout<<"imgIdx:"<<matches[i].imgIdx<<"\tdistance:"<<matches[i].distance<<endl;
+            }
+        }
+        feature_matches_ = matches_ransac;
+
+        // 使用已知3D点的序号来进行提取feature_matches_
+        // vector<cv::DMatch> good_matchs;
+        // std::map<int,cv::Point3f>::iterator it=Tracking::pts_3d_.begin();
+        // for(auto curmatch:feature_matches_){ // 对每一个匹配对判断 是不是 3d点序列的一个序号
+        //     // std::cout << "feature_matches [" << i << "]: " << i << endl;
+        //     if(curmatch.queryIdx==it->first){
+        //         good_matchs.push_back(curmatch);
+        //         it++;
+        //     }
+        // }
+        // feature_matches_ = good_matchs;
+
 
         //计算当前帧位姿
         Mat R,t;
@@ -196,7 +264,7 @@ namespace Monitor
         //筛选匹配到的当前帧的特征点和描述子，
         // Mat desp_tem;
         // vector<cv::KeyPoint> kp_temp;
-        // vector< Point3f >  temp_3d=pts_3d_;
+        // vector< Point3f >  temp_3d=pts_3d_;          // 参考帧3D点
         // pts_3d_.clear();
         // for ( size_t i=0; i<keypoints_curr_.size(); i++ )
         // {
@@ -217,7 +285,7 @@ namespace Monitor
         //         }
         //     }
         // }
-        feature_matches_.clear();
+        // feature_matches_.clear(); featurematch 信息要用来绘制匹配图所以应该在最开始的地方清空
         descriptors_curr_.release();
         // keypoints_curr_.clear();
         // descriptors_ref_=desp_tem; // 注释原因：不更新参考帧 所以也不更新描述子 
@@ -277,13 +345,14 @@ namespace Monitor
         vector<Point2f> pts_2d;
         for ( DMatch m:matches )
         {
-            Point3f p1 = pts_3d_[m.queryIdx];
+            // 这里使用匹配点在参考帧上的序号来获得3D点的序号，所以 pts_3d_ 保存为map ，通过序号获得坐标值
+            Point3f p1 = pts_3d_[m.queryIdx]; 
             pts_3d.push_back (p1);
             pts_2d.push_back ( keypoints_curr_[m.trainIdx].pt );
-            cout<<"m.trainIdx= "<<m.trainIdx<<endl; // ref
-            cout<<"m.queryIdx= "<<m.queryIdx<<endl; // cur
-            cout<<"3d= "<<p1<<endl;
-            cout<<"2d= "<<keypoints_curr_[m.trainIdx].pt<<endl;
+            // cout<<"m.trainIdx= "<<m.trainIdx<<endl; //  cur
+            // cout<<"m.queryIdx= "<<m.queryIdx<<endl; //  ref
+            // cout<<"3d= "<<p1<<endl;
+            // cout<<"2d= "<<keypoints_curr_[m.trainIdx].pt<<endl;
         }
 
         
@@ -389,15 +458,19 @@ namespace Monitor
         // Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> trans=tt.block(0,3,3,1);
         // std::cout << "rotation: " << std::endl << rotation << std::endl;
         // std::cout << "trans: " << std::endl << trans<< std::endl;
+        cout<<"translation_ before: "<<trans(0) << " " << trans(1) << " "<<  trans(2) ;
+        trans = rotation.inverse()*((-1)*trans); // ** 坐标系变换  
         Mat rotation1;
         cv::eigen2cv(rotation,rotation1);
         angle_= rotationMatrixToEulerAngles(rotation1);
         translation_=trans;
         
-        cout<<"angle: "<<angle_<<endl;
         // cout << "size of translation_: " << translation_.size()<< endl;
-        cout<<"translation_ : "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
+        cout<<" -->    translation_ after: "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
+        cout<<"angle: "<<angle_<<endl;
         // cout<<endl<<"after optimization:"<<endl;
         // cout<<"T="<<endl<<Eigen::Isometry3d ( pose->estimate() ).matrix() <<endl;
     }
+
+
 }//namespace Monitor

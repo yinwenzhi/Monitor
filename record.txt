@@ -139,3 +139,146 @@ sudo rm libGL.so
 
 sudo ln -s /usr/local/lib/libGL.so libGL.so 
 
+
+
+疑问：
+
+1、匹配使用的是全部的特征点么？
+//src\PointMatch.cpp 中
+matcher_flann_.match( descriptors_ref_, descriptors_curr_, matches );
+descriptors_ref_ 由以下内容获得
+//demo.cpp中
+vo->descriptors_ref_=descriptors;
+
+descriptors 由 descriptors_1 获得
+for ( size_t i=0; i<keypoints1.size(); i++ )
+{
+  while(myfile>>num>>x>>y>>z)
+  {
+      if(i==num)//3d
+      {
+          descriptors.push_back(descriptors_1.row(i).clone());
+          //...
+      }
+      //...
+  }
+  //...
+}
+这里 假如3d点的num序列有 5、22、78、100 共四个
+那么 
+descriptors[0] = descriptors_1.row(5)
+descriptors[1] = descriptors_1.row(22)
+descriptors[2] = descriptors_1.row(78)
+descriptors[3] = descriptors_1.row(100)
+那么descriptors_ref_ 也就只有四个，所以在进行匹配时使用descriptors_ref_ 应该没有使用所有的特征点？
+
+2、3d点使用的序号
+
+for
+    while(myfile>>num>>x>>y>>z)
+    {
+        if(i==num)
+        {
+            Point3f p_world;
+            p_world.x=x;
+            p_world.y=y;
+            p_world.z=z;
+            pF_ini->pts_3d_ref_.push_back(p_world);
+            keypoints.push_back(keypoints1[i]);
+            descriptors.push_back(descriptors_1.row(i).clone());
+        }
+        else
+        {
+            continue;
+        }
+    }
+}
+这里
+pts_3d_ref_[0] = p_world  // 第5个3d点
+pts_3d_ref_[1] = p_world  // 第22个3d点
+pts_3d_ref_[2] = p_world  // 第78个3d点
+pts_3d_ref_[3] = p_world  // 第100个3d点
+
+vo->pts_3d_=pF_ini->pts_3d_ref_;
+
+而在估计RT时：
+void PointMatch:: pose_estimation_3d2d (std::vector< DMatch > matches,Mat& R, Mat& t )
+{
+    cout<<"ref_->pts_3d_ref_.size:"<<pts_3d_.size()<<endl;
+
+    for ( DMatch m:matches )
+    {
+        Point3f p1 = pts_3d_[m.queryIdx];  
+        // queryIdx 是指当matcher（descriptors_ref_, descriptors_curr_）中的 descriptors_ref_的 id
+        // 分别为  0,1, 2, 3 
+        // 对应的 pts_3d_ 0，1，2，3 分别为3d点 索引 为 0 ， 22， 78 ，100 , 这里倒没有错误
+        pts_3d.push_back ( p1);
+        pts_2d.push_back ( keypoints_curr_[m.trainIdx].pt );
+
+    }
+    solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, SOLVEPNP_EPNP )
+
+3、找出匹配最小距离时的方法
+    Dmatchs 的结构
+
+4、 更改匹配策略 使用所有的特征点进行匹配
+修改对应的序列号
+匹配时matcher_flann_.match( descriptors_all_ref_, descriptors_curr_, matches );
+
+
+
+
+5、使用ransac
+vector<Point2f> srcPoints(matche_final.size()),dstPoints(matche_final.size());
+//保存从关键点中提取到的匹配点对的坐标
+for(int i=0;i<matche_final.size();i++)
+{
+    srcPoints[i]=keypoints11[matche_final[i].queryIdx].pt;
+    dstPoints[i]=keypoints22[matche_final[i].trainIdx].pt;
+}
+//保存计算的单应性矩阵
+Mat homography;
+//保存点对是否保留的标志
+vector<unsigned char> inliersMask1(srcPoints.size());
+//匹配点对进行RANSAC过滤
+homography = findHomography(srcPoints,dstPoints,CV_RANSAC,5,inliersMask1);
+//RANSAC过滤后的点对匹配信息
+vector<DMatch> matches_ransac;
+//手动的保留RANSAC过滤后的匹配点对
+for(int i=0;i<inliersMask1.size();i++)
+{
+    if(inliersMask1[i])
+    {
+        matches_ransac.push_back(matche_final[i]);
+        //cout<<"第"<<i<<"对匹配："<<endl;
+        //cout<<"queryIdx:"<<matches[i].queryIdx<<"\ttrainIdx:"<<matches[i].trainIdx<<endl;
+        //cout<<"imgIdx:"<<matches[i].imgIdx<<"\tdistance:"<<matches[i].distance<<endl;
+    }
+}
+
+待解决问题：
+1 、提出匹配点对 ，使用ORB时普遍的点对距离小于30，需要对比使用breask或者其他的特征点描述子时是什么样的距离情况
+    extract ORB cost = 0.0502806 seconds. 
+    corners.size():492
+    keypoints_curr_.size()492
+    match.size()= 5
+    -- Max dist : 22.000000 
+    -- Min dist : 5.000000 
+
+  修改匹配策略，先使用参考帧中所有特征点进行匹配，之后使用主方向进行删选，然后使用3d点进行删选。
+  修改项：
+  1 matcher->match ( descriptors_all_ref_, descriptors_curr_, match );
+  2 drawMatches 
+  3 添加主方向删除
+  4 添加3d点删除
+  5 使用ransac
+  修改之后发现，在使用图片进行匹配时，基本没有误匹配。
+
+
+2、 位姿计算错误
+0 trans:  299.812 199.423 -665.257
+经过修正匹配策略，推测位姿计算跳变还是因为给出3d位置的点太少，或者给出的3d位置是错误的。
+下一步给出准确的3d点位置，来看看结果
+至于坐标方向错误的原因，暂时没有找到。
+
+

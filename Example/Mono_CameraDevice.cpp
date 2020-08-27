@@ -48,16 +48,67 @@ void ImageGrabber::GrabMono(const cv::Mat& img, double timeStamp){
     mpSLAM->TrackMonocular(_img, timeStamp);
   } else {
     std::cout << " 直接 跟踪" << std::endl;
+
     mpSLAM->TrackMonocular(img, timeStamp);
   }
 }
 
 void ImageGrabber::View(cv::Mat image,bool& isstop){
+  Monitor::Tracking::Ptr tracker = mpSLAM->getTracker();
   Vec3f angle = mpSLAM->getcameraangle();
   Vector3d trans = mpSLAM->getcameratransition();
-  vector<cv::KeyPoint> keypts = mpSLAM->getkeypoints();
+  vector<cv::KeyPoint> curkeypts = mpSLAM->getCurKeyPoints();
+  // vector<cv::KeyPoint> refkeypts = mpSLAM->getRefKeyPoints();
+  
+// #define INITIAL
+#ifdef INITIAL
+  // 显示参考帧
+  namedWindow("refframe",0);
+  cv::resizeWindow("refframe",640,480);
+  // 3  5  7  9
+  vector<bool> parity = {1,0};
+  vector<int>  model=  {3,5,7,9 };
+  
+  for(int j = 0; j< parity.size(); j++){
+      for(int k =0; k<model.size(); k++){
+        cv::Mat refimage = tracker->mref_->color_.clone();
+        bool waitnext = true;
+        std::cout << "new keypoint index !" << std::endl;
+        for(int n = 0; n < tracker->keypoints_all_ref_.size(); n++)
+        {
+            //初始化随机种子
+            cv::RNG rng(cvGetTickCount());
+            CvScalar color = cv::Scalar(rng.uniform(0,255),rng.uniform(0,255),rng.uniform(0,255));
+            if(bool(n%2) == parity[j] && (n%model[k]) == 0 ) {
+              circle(refimage, tracker->keypoints_all_ref_[n].pt, 1, color, 2, 8, 0);
+              cv::putText(refimage,std::to_string(n), tracker->keypoints_all_ref_[n].pt, cv::FONT_HERSHEY_SIMPLEX,0.60, color,1,8);
+
+            }
+            // circle(edges, vo->keypoints_curr_[n].pt, 1, Scalar(255, 0, 255), 2, 8, 0);
+        }
+        circle(refimage, CvPoint(20,1000), 5, CV_RGB(255,0,255), 2, 8, 0);
+        // Mat dst;  
+        // transpose(refimage, dst);
+        // flip(refimage, dst, 1);
+        imshow("refframe",refimage);
+        while(waitnext){
+          std::cout << "waiting for next: press n !" << std::endl;
+          char n = cvWaitKey(30);
+          // 显示下一帧
+          if(n==110) {
+            waitnext = !waitnext;
+            break;
+          }
+          // std::cout << "get :" << (int)(n) << std::endl;
+          sleep(1);
+        }
+      }
+  }
+#endif
+
+  // 显示当前帧
   int a1 = 20,b1 = 300;
-  //          待绘制图像，文字，，字体，尺寸因子，线条颜色，线宽，线型 
+  //         ( 待绘制图像，文字，，字体，尺寸因子，线条颜色，线宽，线型 )
   cv::putText(image,"R: ", cv::Point2f(a1,200), cv::FONT_HERSHEY_SIMPLEX,0.60, CV_RGB(0, 0, 0),1,8);
   cv::putText(image,"t: ", cv::Point2f(a1,230), cv::FONT_HERSHEY_SIMPLEX,0.60, CV_RGB(0, 0, 0),1,8);
   for(int m =0;m<3;m++)
@@ -71,14 +122,32 @@ void ImageGrabber::View(cv::Mat image,bool& isstop){
     cv::putText(image,std::to_string(b), num2, cv::FONT_HERSHEY_SIMPLEX,0.60, CV_RGB(0, 0, 0),1,8);
   }
   
-  std::cout <<  " keypts.size()" << keypts.size() << std::endl;
-  for(size_t n = 0; n < keypts.size(); n++)
+  std::cout <<  " curkeypts.size()" << curkeypts.size() << std::endl;
+  for(size_t n = 0; n < curkeypts.size(); n++)
   {
-    circle(image, keypts[n].pt, 1, Scalar(255, 0, 255), 2, 8, 0);
+    circle(image, curkeypts[n].pt, 1, Scalar(255, 0, 255), 2, 8, 0);
   }
-  
+  namedWindow("reffMono_CameraDevice_currframerame",0);
+  cv::resizeWindow("Mono_CameraDevice_currframe",640,480);
   imshow("Mono_CameraDevice_currframe",image);
-  char c = cvWaitKey(33);
+
+  // 显示匹配关系图
+  namedWindow("img_goodmatch",0);
+  cv::resizeWindow("img_goodmatch",640,480);
+  cv::Mat img_goodmatch;
+  drawMatches ( 
+      tracker->mref_->color_,             // 参考帧图像
+      tracker->keypoints_all_ref_,        // 因为匹配使用描述子是所有特征点的描述子
+      // tracker->keypoints_ref_,        // 因为匹配使用描述子是所有只有3d的描述子
+      image,                              // 当前帧图像
+      tracker->keypoints_curr_, 
+      tracker->feature_matches_, 
+      img_goodmatch 
+       );
+  imshow("img_goodmatch",img_goodmatch);
+
+
+  char c = cvWaitKey(33); // space
   if(c == 27) {       //esc
     isstop = true;
     return ;
@@ -95,6 +164,7 @@ void ImageGrabber::View(cv::Mat image,bool& isstop){
         isstop = true;
         return ;
       }
+
       sleep(1);
     }
     sleep(1);
@@ -194,12 +264,11 @@ int main(int argc, char** argv) {
         return 0;
     }
 
+    bool isstop = false;
+    
     while (flag) {
-  
       cv::Mat image_data; // 创建图像对象 用于存储每一帧的图像
-
       camera.GetImage(image_data); 
-      
 
       if (image_data.channels() >= 3) {
         // cv::cvtColor(image_data,image_data,cv::COLOR_RGB2GRAY);
@@ -207,9 +276,12 @@ int main(int argc, char** argv) {
 
       igb.GrabMono(image_data,0.00001f);
       
-      // 绘制并显示图像
-      imshow("Device",image_data);
+      // // 绘制并显示图像
+      // imshow("Device",image_data);
+      // 绘制并显示图像  
+      igb.View(image_data,isstop);
 
+      if(isstop) break;
       // Check if ESC was pressed
       if (cv::waitKey(30) == 27) {
           break;
@@ -234,6 +306,10 @@ int main(int argc, char** argv) {
         cout << "framPath is nullptr:" << framPath<<  endl; 
         break;
       }
+
+      // cv::Mat reverse;
+      // transpose(image_data, reverse);
+      // image_data = reverse.clone();
 
       // 传送图像数据到Monitor系统
       igb.GrabMono(image_data,0.00001f);
