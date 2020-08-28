@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <cassert>
 #include <opencv2/opencv.hpp>
-#include <glog>
+// #include <glog>
 #include "../include/CameraDevice/CameraDevice.h"
 #include "../include/Monitor/System.h"
 
@@ -41,10 +41,11 @@ void ImageGrabber::GrabMono(const cv::Mat& img, double timeStamp){
     cv::remap(
       img,                  // 输入图像
       _img,                 // 输出图像
-      M1,                   //  两种可能  1 xy 的地一个映射  2 表示CV_16SC2 ..
+      M1,                   // 两种可能  1 xy 的地一个映射  2 表示CV_16SC2 ..
       M2,                   // 两种可能   1 对上M1的第一种时 无任何  2  CV_16UC1 ..
       cv::INTER_LINEAR      // 插值方式 
       );
+
     std::cout << " 矫正后 跟踪" << std::endl;
     mpSLAM->TrackMonocular(_img, timeStamp);
   } else {
@@ -182,11 +183,17 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+
   std::cout << "--args: " << std::endl
     << "  path_to_vocabulary: " << argv[1] << std::endl 
     << "  path_to_setting: " << argv[1] << std::endl
     << "  do_rectify(ture | false): " << argv[2] << std::endl
     << "  use_camera_device (true | false): " << argv[3] << std::endl;
+
+  // Initialize Google's logging library
+  // google::InitGoogleLogging("test");
+  // google::SetLogDestination(google::INFO, "./");
+  // LOG(INFO) << "Found"  << endl;
 
   Monitor::System SLAM(argv[1]);
   ImageGrabber igb(&SLAM);

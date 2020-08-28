@@ -462,7 +462,7 @@ namespace Monitor
         // Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> trans=tt.block(0,3,3,1);
         cout<<"translation_ before: "<<trans(0) << " " << trans(1) << " "<<  trans(2) ;
         trans = rotation.inverse()*((-1)*trans); // ** 坐标系变换  
-        translation_=trans;
+        Tracking::translation_=trans;
         cout<<" -->    translation_ after: "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
         std::cout << "trans: " << std::endl << trans<< std::endl;
         Mat rotation1;
