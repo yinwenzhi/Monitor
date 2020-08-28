@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cassert>
 #include <opencv2/opencv.hpp>
+#include <glog>
 #include "../include/CameraDevice/CameraDevice.h"
 #include "../include/Monitor/System.h"
 
@@ -57,6 +58,7 @@ void ImageGrabber::View(cv::Mat image,bool& isstop){
   Monitor::Tracking::Ptr tracker = mpSLAM->getTracker();
   Vec3f angle = mpSLAM->getcameraangle();
   Vector3d trans = mpSLAM->getcameratransition();
+  // cout << "trans in Mono: " << trans;
   vector<cv::KeyPoint> curkeypts = mpSLAM->getCurKeyPoints();
   // vector<cv::KeyPoint> refkeypts = mpSLAM->getRefKeyPoints();
   
@@ -116,6 +118,7 @@ void ImageGrabber::View(cv::Mat image,bool& isstop){
     
     double a= angle[m];
     double b= trans[m];
+    cout << "b:" << b;
     cv::Point2f num1 (a1+(m+1)*150,200);
     cv::Point2f num2 (a1+(m+1)*150,230);
     cv::putText(image,std::to_string(a*180/3.1415926), num1, cv::FONT_HERSHEY_SIMPLEX,0.60, CV_RGB(0, 0, 0),1,8);
@@ -127,7 +130,7 @@ void ImageGrabber::View(cv::Mat image,bool& isstop){
   {
     circle(image, curkeypts[n].pt, 1, Scalar(255, 0, 255), 2, 8, 0);
   }
-  namedWindow("reffMono_CameraDevice_currframerame",0);
+  namedWindow("Mono_CameraDevice_currframe",0);
   cv::resizeWindow("Mono_CameraDevice_currframe",640,480);
   imshow("Mono_CameraDevice_currframe",image);
 

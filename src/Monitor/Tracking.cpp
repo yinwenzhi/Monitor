@@ -30,7 +30,6 @@ namespace Monitor
     //将旋转矩阵转换为欧拉角
     Vec3f rotationMatrixToEulerAngles(Mat &R)
     {
-
         float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
 
 
@@ -212,9 +211,7 @@ namespace Monitor
         ORBmatcher rotmatcher;
         rotmatcher.DisBlogeByRot( keypoints_all_ref_, keypoints_curr_,  feature_matches_);
 
-        // 第三部： 
-
-        // 使用ransac
+        // 第三步：  使用ransac
         vector<Point2f> srcPoints(feature_matches_.size()),dstPoints(feature_matches_.size());
         //保存从关键点中提取到的匹配点对的坐标
         for(int i=0;i<feature_matches_.size();i++)
@@ -237,24 +234,31 @@ namespace Monitor
             {
                 matches_ransac.push_back(feature_matches_[i]);
                 //cout<<"第"<<i<<"对匹配："<<endl;
-                //cout<<"queryIdx:"<<matches[i].queryIdx<<"\ttrainIdx:"<<matches[i].trainIdx<<endl;
+                // cout<<"queryIdx:"<<feature_matches_[i].queryIdx<<"\ttrainIdx:"<<feature_matches_[i].trainIdx<<endl;
                 //cout<<"imgIdx:"<<matches[i].imgIdx<<"\tdistance:"<<matches[i].distance<<endl;
             }
         }
         feature_matches_ = matches_ransac;
+        cout<<"matches.size() after ransac= "<<feature_matches_.size()<<endl;
 
         // 使用已知3D点的序号来进行提取feature_matches_
-        // vector<cv::DMatch> good_matchs;
-        // std::map<int,cv::Point3f>::iterator it=Tracking::pts_3d_.begin();
-        // for(auto curmatch:feature_matches_){ // 对每一个匹配对判断 是不是 3d点序列的一个序号
-        //     // std::cout << "feature_matches [" << i << "]: " << i << endl;
-        //     if(curmatch.queryIdx==it->first){
-        //         good_matchs.push_back(curmatch);
-        //         it++;
-        //     }
-        // }
-        // feature_matches_ = good_matchs;
-
+        vector<cv::DMatch> good_matchs;
+        std::map<int,cv::Point3f>::iterator it=Tracking::pts_3d_.begin();
+ 
+        int matchindex = 0; 
+        // 对每一个匹配对判断 是不是 3d点序列的一个序号
+        while(matchindex<feature_matches_.size() && it!=Tracking::pts_3d_.end()){
+            // cout <<"queryIdx:"<<feature_matches_[matchindex].queryIdx<<"    cur3d->first: " << it->first  << endl;
+            if(feature_matches_[matchindex].queryIdx < it->first) matchindex++;
+            else if (feature_matches_[matchindex].queryIdx > it->first) it++;
+            else {
+                good_matchs.push_back(feature_matches_[matchindex]);
+                matchindex++;
+                it++;
+            }
+        }
+        feature_matches_ = good_matchs;
+        cout<<"matches.size() after 3d= "<<feature_matches_.size()<<endl;
 
         //计算当前帧位姿
         Mat R,t;
@@ -442,7 +446,7 @@ namespace Monitor
         }
 
         chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
-        // optimizer.setVerbose ( true );
+        // optimizer.setVerbose ( true ); // 打开优化输出
         optimizer.initializeOptimization();
         optimizer.optimize ( 100 );
         chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
@@ -456,17 +460,17 @@ namespace Monitor
         Eigen::Vector3d trans=tt.block(0,3,3,1);
         // Eigen::Vector3d trans=tt.block(0,3,3,0);
         // Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> trans=tt.block(0,3,3,1);
-        // std::cout << "rotation: " << std::endl << rotation << std::endl;
-        // std::cout << "trans: " << std::endl << trans<< std::endl;
         cout<<"translation_ before: "<<trans(0) << " " << trans(1) << " "<<  trans(2) ;
         trans = rotation.inverse()*((-1)*trans); // ** 坐标系变换  
+        translation_=trans;
+        cout<<" -->    translation_ after: "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
+        std::cout << "trans: " << std::endl << trans<< std::endl;
         Mat rotation1;
         cv::eigen2cv(rotation,rotation1);
         angle_= rotationMatrixToEulerAngles(rotation1);
-        translation_=trans;
+        // std::cout << "rotation: " << std::endl << rotation << std::endl;
         
         // cout << "size of translation_: " << translation_.size()<< endl;
-        cout<<" -->    translation_ after: "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
         cout<<"angle: "<<angle_<<endl;
         // cout<<endl<<"after optimization:"<<endl;
         // cout<<"T="<<endl<<Eigen::Isometry3d ( pose->estimate() ).matrix() <<endl;
