@@ -43,7 +43,7 @@ namespace Monitor
         VOState     state_;
         cv::Ptr<cv::ORB> orb_;                        // orb detector and computer
         // vector<cv::Point3f>     pts_3d_ref_;          // 3d points in reference frame
-        unordered_map<int,cv::Point3f>    pts_3d_ref_;
+        // unordered_map<int,cv::Point3f>    pts_3d_ref_;
         vector<cv::KeyPoint>    keypoints_all_ref_;   // keypoints (all) in ref frame
         vector<cv::KeyPoint>    keypoints_ref_;       // keypoints (just 3d point) in ref frame
         vector<cv::KeyPoint>    keypoints_curr_;      // keypoints in current frame
@@ -59,7 +59,7 @@ namespace Monitor
         Frame::Ptr mprefFrame;  
           
         // vector< Point3f >              pts_3d_;       // Tracking->pts_3d_=pF_ini->pts_3d_ref_;
-        unordered_map<int,cv::Point3f>  pts_3d_;
+        map<int,cv::Point3f>  pts_3d_;
         Camera::Ptr                    mcamera_;  
         Eigen::Isometry3d              T_esti;        // 欧式变换矩阵
         cv::Vec3f                      angle_;        // 欧拉角

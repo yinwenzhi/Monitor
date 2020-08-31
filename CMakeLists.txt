@@ -57,6 +57,7 @@ add_library( ${PROJECT_NAME}  SHARED
 	./src/Monitor/Camera.cpp
 	./src/Monitor/Feature.cpp
 	./src/Monitor/Frame.cpp
+	./src/Monitor/ORBmatcher.cpp
 	)
 target_link_libraries( ${PROJECT_NAME} 
 	${THIRD_PARTY_LIBS} 

@@ -139,6 +139,8 @@ sudo rm libGL.so
 
 sudo ln -s /usr/local/lib/libGL.so libGL.so 
 
+
+
 疑问：
 
 1、匹配使用的是全部的特征点么？
@@ -226,7 +228,11 @@ void PointMatch:: pose_estimation_3d2d (std::vector< DMatch > matches,Mat& R, Ma
 
 
 
+<<<<<<< HEAD
 、使用ransac
+=======
+5、使用ransac
+>>>>>>> fc5a3030a8936345c55126f198c70c3d6fcf288b
 vector<Point2f> srcPoints(matche_final.size()),dstPoints(matche_final.size());
 //保存从关键点中提取到的匹配点对的坐标
 for(int i=0;i<matche_final.size();i++)
@@ -252,4 +258,38 @@ for(int i=0;i<inliersMask1.size();i++)
         //cout<<"queryIdx:"<<matches[i].queryIdx<<"\ttrainIdx:"<<matches[i].trainIdx<<endl;
         //cout<<"imgIdx:"<<matches[i].imgIdx<<"\tdistance:"<<matches[i].distance<<endl;
     }
+<<<<<<< HEAD
 }
+=======
+}
+
+待解决问题：
+1 、提出匹配点对 ，使用ORB时普遍的点对距离小于30，需要对比使用breask或者其他的特征点描述子时是什么样的距离情况
+    extract ORB cost = 0.0502806 seconds. 
+    corners.size():492
+    keypoints_curr_.size()492
+    match.size()= 5
+    -- Max dist : 22.000000 
+    -- Min dist : 5.000000 
+
+  修改匹配策略，先使用参考帧中所有特征点进行匹配，之后使用主方向进行删选，然后使用3d点进行删选。
+  修改项：
+  1 matcher->match ( descriptors_all_ref_, descriptors_curr_, match );
+  2 drawMatches 
+  3 添加主方向删除
+  4 添加3d点删除
+  5 使用ransac
+  修改之后发现，在使用图片进行匹配时，基本没有误匹配。
+
+
+2、 位姿计算错误
+0 trans:  299.812 199.423 -665.257
+经过修正匹配策略，推测位姿计算跳变还是因为给出3d位置的点太少，或者给出的3d位置是错误的。
+下一步给出准确的3d点位置，来看看结果
+至于坐标方向错误的原因，暂时没有找到。
+
+
+
+
+
+>>>>>>> fc5a3030a8936345c55126f198c70c3d6fcf288b

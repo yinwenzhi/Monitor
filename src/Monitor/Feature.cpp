@@ -183,8 +183,8 @@ float getdistancepl(float x0, float y0, float x1, float y1, float x2, float y2) 
 }
 
 void Feature:: GetKeyPoint(Mat img){
-    GetCrossPoint(img);
-    // GetORBPoint(img);
+    // GetCrossPoint(img);
+    GetORBPoint(img);
 }
 void Feature:: GetCrossPoint(Mat img)
 {
