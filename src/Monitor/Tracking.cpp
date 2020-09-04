@@ -27,7 +27,7 @@ using namespace std;
 using namespace cv;
 namespace Monitor
 {
-    //将旋转矩阵转换为欧拉角
+    //将旋转矩阵转换为欧拉角 欧拉角顺序为 x y z 
     Vec3f rotationMatrixToEulerAngles(Mat &R)
     {
         float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
@@ -209,7 +209,14 @@ namespace Monitor
 
         // 第二步：使用主方向进行删除匹配点对
         ORBmatcher rotmatcher;
-        rotmatcher.DisBlogeByRot( keypoints_all_ref_, keypoints_curr_,  feature_matches_);
+
+        try{
+            rotmatcher.DisBlogeByRot( keypoints_all_ref_, keypoints_curr_,  feature_matches_);
+        }catch(exception e){
+            cout << "DisBlogeByRot this frame failed,continue.";
+            return false;
+        }
+        cout<<"matches.size()= "<<feature_matches_.size()<<endl;
 
         // 第三步：  使用ransac
         vector<Point2f> srcPoints(feature_matches_.size()),dstPoints(feature_matches_.size());
@@ -466,8 +473,10 @@ namespace Monitor
         cout<<" -->    translation_ after: "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
         std::cout << "trans: " << std::endl << trans<< std::endl;
         Mat rotation1;
+        // rotation = 
         cv::eigen2cv(rotation,rotation1);
-        angle_= rotationMatrixToEulerAngles(rotation1);
+ 
+        Tracking::angle_= rotationMatrixToEulerAngles(rotation1);
         // std::cout << "rotation: " << std::endl << rotation << std::endl;
         
         // cout << "size of translation_: " << translation_.size()<< endl;

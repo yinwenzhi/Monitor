@@ -20,7 +20,7 @@ IF(G2O_FOUND)
 	MESSAGE(STATUS, "G2O found: ${G2O_FOUND}")
 ENDIF(G2O_FOUND)
 
-find_package(Glog REQUIRED)
+#find_package(Glog REQUIRED)
 find_package(Sophus REQUIRED)
 find_package(Pangolin REQUIRED)
 find_package(OpenCV  REQUIRED)
