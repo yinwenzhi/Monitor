@@ -4,7 +4,7 @@
 int main()
 {
 
-    Monitor::CameraDevice camera;
+    Device::CameraDevice camera;
     if(camera.ConnectDevice() == -1){
         std::cout << "camera Device connect failed.please check camera device" <<std::endl;
         return 0;

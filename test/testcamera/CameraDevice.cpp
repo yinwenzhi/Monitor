@@ -3,12 +3,12 @@
 
 using namespace cv;
 
-Monitor::CameraDevice::CameraDevice(){
+Device::CameraDevice::CameraDevice(){
     CameraSdkInit(1);
-    std::cout<< "相机SDK初始化成功"<< std::end;
+    std::cout<< "相机SDK初始化成功"<< std::endl;
 }
 
-int Monitor::CameraDevice::ConnectDevice(){
+int Device::CameraDevice::ConnectDevice(){
     //枚举设备，并建立设备列表
     iStatus = CameraEnumerateDevice(&tCameraEnumList,&iCameraCounts);
 	printf("state = %d\n", iStatus);
@@ -16,7 +16,7 @@ int Monitor::CameraDevice::ConnectDevice(){
 	printf("count = %d\n", iCameraCounts);
     //没有连接设备
     if(iCameraCounts==0){
-        std::cout<< "没有连接设备,请检查相机是否连接"<< std::end;
+        std::cout<< "没有连接设备,请检查相机是否连接"<< std::endl;
         return -1;
     }
 
@@ -26,7 +26,7 @@ int Monitor::CameraDevice::ConnectDevice(){
     //初始化失败
 	printf("state = %d\n", iStatus);
     if(iStatus!=CAMERA_STATUS_SUCCESS){
-        std::cout<< "相机初始化失败"<< std::end;
+        std::cout<< "相机初始化失败"<< std::endl;
         return -1;
     }
 
@@ -59,13 +59,13 @@ int Monitor::CameraDevice::ConnectDevice(){
     return 0;
 }
 
-Monitor::CameraDevice::~CameraDevice(){
+Device::CameraDevice::~CameraDevice(){
     CameraUnInit(hCamera);
     //注意，现反初始化后再free
     free(g_pRgbBuffer);
 }
 
-cv::Mat  Monitor::CameraDevice::GetImage(cv::Mat &image){
+cv::Mat  Device::CameraDevice::GetImage(cv::Mat &image){
     if(CameraGetImageBuffer(hCamera,&sFrameInfo,&pbyBuffer,1000) == CAMERA_STATUS_SUCCESS)
     {
         CameraImageProcess(hCamera, pbyBuffer, g_pRgbBuffer,&sFrameInfo);
