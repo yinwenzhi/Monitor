@@ -79,7 +79,7 @@ void ORBmatcher::DisBlogeByRot(std::vector<KeyPoint> & _keypoints_1, std::vector
     vector< DMatch >  _newmatches;
      
     for(int i=0;i<HISTO_LENGTH;i++){
-    // 每个bin里预分配500个，因为使用的是vector不够的话可以自动扩展容量
+        // 每个bin里预分配500个，因为使用的是vector不够的话可以自动扩展容量
         rotHist[i].reserve(500);   
     }
     //! 原作者(ORBSLAM)代码是 const float factor = 1.0f/HISTO_LENGTH; 是错误的，更改为下面代码，后面会解释   
@@ -90,16 +90,13 @@ void ORBmatcher::DisBlogeByRot(std::vector<KeyPoint> & _keypoints_1, std::vector
     for(int i=0; i<_matches.size(); i++){
         // float rot = F1.mvKeysUn[i1].angle-F2.mvKeysUn[bestIdx2].angle;
         float rot = _keypoints_1[_matches[i].queryIdx].angle - _keypoints_2[_matches[i].queryIdx].angle;
-        if(rot<0.0)
-            rot+=360.0f;
+        if(rot<0.0)  rot+=360.0f;
         // 表示当前rot被分配在第几个直方图bin  
         int bin = round(rot*factor);
         // 如果bin 满了又是一个轮回
-        if(bin==HISTO_LENGTH)
-            bin=0;
+        if(bin==HISTO_LENGTH)  bin=0;
         assert(bin>=0 && bin<HISTO_LENGTH);
         rotHist[bin].push_back(i); // 第i对匹配对
-        
     }
 
     // Step 6 筛除旋转直方图中“非主流”部分
@@ -112,9 +109,8 @@ void ORBmatcher::DisBlogeByRot(std::vector<KeyPoint> & _keypoints_1, std::vector
 
     for(int b=0; b<HISTO_LENGTH; b++)
     {
-        if(b==ind1 || b==ind2 || b==ind3){
         // if(b==ind1 || b==ind2 ){
-
+        if(b==ind1 || b==ind2 || b==ind3){
             // 这个方向上的匹配对会保留,添加rotHist[b].size()个标记
             flag.insert(flag.end(), rotHist[b].size(), 1);
             continue;
