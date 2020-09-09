@@ -100,6 +100,10 @@ int main ( int argc, char** argv )
     Mat img_goodmatch;
     drawMatches ( img_1, keypoints_1, img_2, keypoints_2, matches, img_match );
     drawMatches ( img_1, keypoints_1, img_2, keypoints_2, good_matches, img_goodmatch );
+    namedWindow("优化后匹配点对",0);
+    namedWindow("所有匹配点对",0);
+    cv::resizeWindow("优化后匹配点对",640,480);
+    cv::resizeWindow("所有匹配点对",640,480);
     imshow ( "所有匹配点对", img_match );
     imshow ( "优化后匹配点对", img_goodmatch );
     waitKey(0);

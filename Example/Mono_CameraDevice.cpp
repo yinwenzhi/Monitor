@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <cassert>
 #include <opencv2/opencv.hpp>
-#include <glog>
+// #include <glog>
 #include "../include/CameraDevice/CameraDevice.h"
 #include "../include/Monitor/System.h"
 
@@ -41,10 +41,11 @@ void ImageGrabber::GrabMono(const cv::Mat& img, double timeStamp){
     cv::remap(
       img,                  // 输入图像
       _img,                 // 输出图像
-      M1,                   //  两种可能  1 xy 的地一个映射  2 表示CV_16SC2 ..
+      M1,                   // 两种可能  1 xy 的地一个映射  2 表示CV_16SC2 ..
       M2,                   // 两种可能   1 对上M1的第一种时 无任何  2  CV_16UC1 ..
       cv::INTER_LINEAR      // 插值方式 
       );
+
     std::cout << " 矫正后 跟踪" << std::endl;
     mpSLAM->TrackMonocular(_img, timeStamp);
   } else {
@@ -138,7 +139,8 @@ void ImageGrabber::View(cv::Mat image,bool& isstop){
   namedWindow("img_goodmatch",0);
   cv::resizeWindow("img_goodmatch",640,480);
   cv::Mat img_goodmatch;
-  drawMatches ( 
+  try{
+      drawMatches ( 
       tracker->mref_->color_,             // 参考帧图像
       tracker->keypoints_all_ref_,        // 因为匹配使用描述子是所有特征点的描述子
       // tracker->keypoints_ref_,        // 因为匹配使用描述子是所有只有3d的描述子
@@ -147,6 +149,10 @@ void ImageGrabber::View(cv::Mat image,bool& isstop){
       tracker->feature_matches_, 
       img_goodmatch 
        );
+  }catch(exception e){
+    cout << "draw this frame matchse failed,continue.";
+
+  }
   imshow("img_goodmatch",img_goodmatch);
 
 
@@ -182,11 +188,17 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+
   std::cout << "--args: " << std::endl
     << "  path_to_vocabulary: " << argv[1] << std::endl 
     << "  path_to_setting: " << argv[1] << std::endl
     << "  do_rectify(ture | false): " << argv[2] << std::endl
     << "  use_camera_device (true | false): " << argv[3] << std::endl;
+
+  // Initialize Google's logging library
+  // google::InitGoogleLogging("test");
+  // google::SetLogDestination(google::INFO, "./");
+  // LOG(INFO) << "Found"  << endl;
 
   Monitor::System SLAM(argv[1]);
   ImageGrabber igb(&SLAM);
@@ -277,7 +289,12 @@ int main(int argc, char** argv) {
         // cv::cvtColor(image_data,image_data,cv::COLOR_RGB2GRAY);
       }
 
-      igb.GrabMono(image_data,0.00001f);
+      try{
+        igb.GrabMono(image_data,0.00001f);
+      }catch(exception e){
+        cout << "process this frame failed,continue.";
+
+      }
       
       // // 绘制并显示图像
       // imshow("Device",image_data);

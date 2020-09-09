@@ -20,6 +20,7 @@ IF(G2O_FOUND)
 	MESSAGE(STATUS, "G2O found: ${G2O_FOUND}")
 ENDIF(G2O_FOUND)
 
+#find_package(Glog REQUIRED)
 find_package(Sophus REQUIRED)
 find_package(Pangolin REQUIRED)
 find_package(OpenCV  REQUIRED)
@@ -61,6 +62,7 @@ add_library( ${PROJECT_NAME}  SHARED
 	)
 target_link_libraries( ${PROJECT_NAME} 
 	${THIRD_PARTY_LIBS} 
+	# ${GLOG_LIBRARIES}
 	-lMVSDK
 	)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 11)	
@@ -81,8 +83,9 @@ add_executable(${ApplicationName} ./Example/Mono_CameraDevice.cpp
 set_property(TARGET ${ApplicationName} PROPERTY CXX_STANDARD 11)
 target_link_libraries(${ApplicationName} 
 	${PROJECT_NAME} 
-	
+	# ${GLOG_LIBRARIES}
 	)
+	
 #install(TARGETS ${ApplicationName} DESTINATION bin)
 
 

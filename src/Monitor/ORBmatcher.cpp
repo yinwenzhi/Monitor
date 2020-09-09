@@ -1,3 +1,4 @@
+#include <iostream>
 #include "ORBmatcher.h"
 
 
@@ -90,11 +91,13 @@ void ORBmatcher::DisBlogeByRot(std::vector<KeyPoint> & _keypoints_1, std::vector
     for(int i=0; i<_matches.size(); i++){
         // float rot = F1.mvKeysUn[i1].angle-F2.mvKeysUn[bestIdx2].angle;
         float rot = _keypoints_1[_matches[i].queryIdx].angle - _keypoints_2[_matches[i].queryIdx].angle;
+        if(rot < -360.0f || rot > 360.0f) continue; // dbug中有rot=-7.30321e+35  如果过小的话就跳过
         if(rot<0.0)  rot+=360.0f;
         // 表示当前rot被分配在第几个直方图bin  
         int bin = round(rot*factor);
         // 如果bin 满了又是一个轮回
         if(bin==HISTO_LENGTH)  bin=0;
+        std::cout <<"rot: " << rot <<  "   bin: " << bin << std::endl;
         assert(bin>=0 && bin<HISTO_LENGTH);
         rotHist[bin].push_back(i); // 第i对匹配对
     }

@@ -260,6 +260,10 @@ void Feature:: GetCrossPoint(Mat img)
 
 void Feature:: GetORBPoint(Mat img){
     assert(img.data != nullptr);
+    if(img.data == nullptr) {
+        cout << "no ORBpoint in img. return ";
+        return;
+    }
 
     //-- 初始化
     std::vector<KeyPoint> keypoints_;

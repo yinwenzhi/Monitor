@@ -7,7 +7,7 @@
 
 #include "CameraApi.h" //相机SDK的API头文件
 
-namespace Monitor
+namespace Device
 {
 
     class CameraDevice

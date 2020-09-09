@@ -27,10 +27,11 @@ using namespace std;
 using namespace cv;
 namespace Monitor
 {
-    //将旋转矩阵转换为欧拉角
+    //将旋转矩阵转换为欧拉角 欧拉角顺序为 x y z 
     Vec3f rotationMatrixToEulerAngles(Mat &R)
     {
-        float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
+        // float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
+        float sy = sqrt(R.at<double>(2,1) * R.at<double>(2,1) +  R.at<double>(2,2) * R.at<double>(2,2) );
 
 
         bool singular = sy < 1e-6; // If
@@ -46,6 +47,9 @@ namespace Monitor
             y = atan2(-R.at<double>(2,0), sy);
             z = 0;
         }
+        // x = x*(180/3.1415926);
+        // y = y*(180/3.1415926);
+        // z = z*(180/3.1415926);
         return Vec3f(x, y, z);
     }
     
@@ -111,7 +115,7 @@ namespace Monitor
                 cout << "can not open this file" << endl;
             }
             int width , height;
-            int pixX, pixY;
+            int pixX , pixY;
             myfile>> width >> height;
             myfile>> pixX >> pixY;
             while(myfile>>num>>x>>y>>z)
@@ -120,9 +124,13 @@ namespace Monitor
                 if(i==num)
                 {
                     Point3f p_world;
-                    p_world.x= (x- (pixX%2) == 0 ? (pixX/2) : (pixX/2 +1))*width/pixX ;
-                    p_world.y= (y- (pixY%2) == 0 ? (pixY/2) : (pixX/2 +1))*height/pixY ;
+                    // p_world.x= (x- (pixX%2) == 0 ? (pixX/2) : (pixX/2 +1))*(1.0)*width/pixX ;
+                    // p_world.y= (y- (pixY%2) == 0 ? (pixY/2) : (pixX/2 +1))*(1.0)*height/pixY ;
+                    p_world.x= (x*(1.0)- pixX/2)*width/pixX*(1.0) ;
+                    p_world.y= (y*(1.0)- pixY/2)*height/pixY*(1.0) ;
                     p_world.z= 0 ;
+                    cout << "x: " << x<< " y: "<< y << " z: "<< z <<" p_world " << p_world << endl;
+                    
                     
                     //pF_ini->pts_3d_ref_.push_back(p_world);
                     pF_ini->pts_3d_ref_[num] = p_world; // 改为map 容易根据序号提取3d点
@@ -209,7 +217,14 @@ namespace Monitor
 
         // 第二步：使用主方向进行删除匹配点对
         ORBmatcher rotmatcher;
-        rotmatcher.DisBlogeByRot( keypoints_all_ref_, keypoints_curr_,  feature_matches_);
+
+        try{
+            rotmatcher.DisBlogeByRot( keypoints_all_ref_, keypoints_curr_,  feature_matches_);
+        }catch(exception e){
+            cout << "DisBlogeByRot this frame failed,continue.";
+            return false;
+        }
+        cout<<"matches.size()= "<<feature_matches_.size()<<endl;
 
         // 第三步：  使用ransac
         vector<Point2f> srcPoints(feature_matches_.size()),dstPoints(feature_matches_.size());
@@ -244,7 +259,13 @@ namespace Monitor
         // 使用已知3D点的序号来进行提取feature_matches_
         vector<cv::DMatch> good_matchs;
         std::map<int,cv::Point3f>::iterator it=Tracking::pts_3d_.begin();
- 
+
+        for(;it!=Tracking::pts_3d_.end();it++)
+        {
+            cout << " pF_ini->pts_3d_ref_ id : " << it->first << " point: "<< it->second << endl;
+        }
+        it=Tracking::pts_3d_.begin();
+
         int matchindex = 0; 
         // 对每一个匹配对判断 是不是 3d点序列的一个序号
         while(matchindex<feature_matches_.size() && it!=Tracking::pts_3d_.end()){
@@ -320,7 +341,6 @@ namespace Monitor
         vector<cv::DMatch> matches;
         matcher_flann_.match( descriptors_ref_, descriptors_curr_, matches );
         // select the best matches
-        cout<<123<<endl;
         float min_dis = std::min_element (
                 matches.begin(), matches.end(),
                 [] ( const cv::DMatch& m1, const cv::DMatch& m2 )
@@ -344,7 +364,7 @@ namespace Monitor
     {
         cout<<"ref_->pts_3d_ref_.size:"<<pts_3d_.size()<<endl;
         //Mat K = f_cur.camera_->K;
-        Mat K = ( Mat_<double> ( 3,3 ) << mcamera_->fx_, 0, mcamera_->fy_, 0, mcamera_->cx_, mcamera_->fy_, 0, 0, 1 );
+        Mat K = ( Mat_<double> ( 3,3 ) << mcamera_->fx_, 0, mcamera_->cx_, 0, mcamera_->fy_, mcamera_->cy_, 0, 0, 1 );
         vector<Point3f> pts_3d;
         vector<Point2f> pts_2d;
         for ( DMatch m:matches )
@@ -353,6 +373,7 @@ namespace Monitor
             Point3f p1 = pts_3d_[m.queryIdx]; 
             pts_3d.push_back (p1);
             pts_2d.push_back ( keypoints_curr_[m.trainIdx].pt );
+            std::cout << "3d， id： " << m.queryIdx << " point: " << p1 <<  "  2d.point: "<< keypoints_curr_[m.trainIdx].pt << endl;
             // cout<<"m.trainIdx= "<<m.trainIdx<<endl; //  cur
             // cout<<"m.queryIdx= "<<m.queryIdx<<endl; //  ref
             // cout<<"3d= "<<p1<<endl;
@@ -364,15 +385,29 @@ namespace Monitor
             return false;
             cout<<"3d-2d pairs  "<<pts_3d.size() << " < 4 , skip this frame." << endl;
         }
-        // solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, SOLVEPNP_EPNP ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
-        solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, CV_ITERATIVE ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
 
+        solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, SOLVEPNP_EPNP ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
+        // solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, CV_ITERATIVE ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
+        std::cout << "旋转向量: " << std::endl << R << std::endl;
         cv::Rodrigues ( R, R ); // r为旋转向量形式，用Rodrigues公式转换为矩阵
 
-        // cout<<"R="<<endl<<R<<endl;
-        // cout<<"t="<<endl<<t<<endl;
+        cout<<"before R=" << R <<endl;
+        cout<<"before t="<< endl << t <<endl;
         bundleAdjustment ( pts_3d, pts_2d, K, R, t );
-        std::cout << "R: " << std::endl << R << std::endl;
+
+        // cout<<"afterba R="<< endl << R <<endl;
+        // cout<<"afterba t="<< endl << t <<endl;
+
+        // Mat rotation1;
+        // cv::eigen2cv(rotation,rotation1);
+ 
+        // Tracking::angle_= rotationMatrixToEulerAngles(rotation1);
+        Tracking::angle_= rotationMatrixToEulerAngles(R);
+        cout << "rotation: " << std::endl << R << std::endl;
+        cout << "EulerAngles_: "<<angle_<<endl;
+        
+        
+
         return true;
     }
 
@@ -458,22 +493,21 @@ namespace Monitor
         // std::cout << "tt: " <<std::endl << tt<< std::endl;
         Eigen::Matrix3d rotation=tt.block(0,0,3,3);
         Eigen::Vector3d trans=tt.block(0,3,3,1);
+
         // Eigen::Vector3d trans=tt.block(0,3,3,0);
         // Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> trans=tt.block(0,3,3,1);
+        // Eigen::Matrix3d temp =  rotation.inverse();
+        // rotation = temp;
         cout<<"translation_ before: "<<trans(0) << " " << trans(1) << " "<<  trans(2) ;
         trans = rotation.inverse()*((-1)*trans); // ** 坐标系变换  
-        translation_=trans;
-        cout<<" -->    translation_ after: "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
-        std::cout << "trans: " << std::endl << trans<< std::endl;
-        Mat rotation1;
-        cv::eigen2cv(rotation,rotation1);
-        angle_= rotationMatrixToEulerAngles(rotation1);
-        // std::cout << "rotation: " << std::endl << rotation << std::endl;
-        
-        // cout << "size of translation_: " << translation_.size()<< endl;
-        cout<<"angle: "<<angle_<<endl;
+        Tracking::translation_=trans;
+        cout <<" -->    translation_ after: "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
+        cout << " distance: " << sqrt(translation_(0)*translation_(0)+translation_(1)*translation_(1)+translation_(2)*translation_(2));
+        cv::eigen2cv(rotation,R);
+        cv::eigen2cv(trans,t);
         // cout<<endl<<"after optimization:"<<endl;
         // cout<<"T="<<endl<<Eigen::Isometry3d ( pose->estimate() ).matrix() <<endl;
+ 
     }
 
 
