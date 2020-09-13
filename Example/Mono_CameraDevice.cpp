@@ -46,10 +46,10 @@ void ImageGrabber::GrabMono(const cv::Mat& img, double timeStamp){
       cv::INTER_LINEAR      // 插值方式 
       );
 
-    std::cout << " 矫正后 跟踪" << std::endl;
+    // std::cout << " 矫正后 跟踪" << std::endl;
     mpSLAM->TrackMonocular(_img, timeStamp);
   } else {
-    std::cout << " 直接 跟踪" << std::endl;
+    //std::cout << " 直接 跟踪" << std::endl;
 
     mpSLAM->TrackMonocular(img, timeStamp);
   }
@@ -120,12 +120,15 @@ void ImageGrabber::View(cv::Mat image,bool& isstop){
     double a= angle[m];
     double b= trans[m];
     cout << "b:" << b;
-    cv::Point2f num1 (a1+(m+1)*150,200);
-    cv::Point2f num2 (a1+(m+1)*150,230);
-    cv::putText(image,std::to_string(a*180/3.1415926), num1, cv::FONT_HERSHEY_SIMPLEX,0.60, CV_RGB(0, 0, 0),1,8);
-    cv::putText(image,std::to_string(b), num2, cv::FONT_HERSHEY_SIMPLEX,0.60, CV_RGB(0, 0, 0),1,8);
+    cv::Point2f num1 (a1+(m+1)*300,200);
+    cv::Point2f num2 (a1+(m+1)*300,230);
+    cv::putText(image,std::to_string(a*180/3.1415926), num1, cv::FONT_HERSHEY_SIMPLEX,1, CV_RGB(255,0, 0),1,8);
+    cv::putText(image,std::to_string(b), num2, cv::FONT_HERSHEY_SIMPLEX,1, CV_RGB(255,0, 0),1,8);
   }
-  
+  cv::putText(image,"distance: ", cv::Point2f(a1,260), cv::FONT_HERSHEY_SIMPLEX,0.60, CV_RGB(255,0, 0),1,8);
+  cv::putText(image,std::to_string(sqrt(trans(0)*trans(0)+trans(1)*trans(1)+trans(2)*trans(2))),
+     cv::Point2f(a1+300,260), cv::FONT_HERSHEY_SIMPLEX,1, CV_RGB( 255,0, 0),1,8);
+
   std::cout <<  " curkeypts.size()" << curkeypts.size() << std::endl;
   for(size_t n = 0; n < curkeypts.size(); n++)
   {
@@ -307,6 +310,7 @@ int main(int argc, char** argv) {
           break;
       }
     }
+    sleep(2000);
   }else{  // use dataset
     
     int k = 0;

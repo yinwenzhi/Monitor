@@ -97,7 +97,7 @@ void ORBmatcher::DisBlogeByRot(std::vector<KeyPoint> & _keypoints_1, std::vector
         int bin = round(rot*factor);
         // 如果bin 满了又是一个轮回
         if(bin==HISTO_LENGTH)  bin=0;
-        std::cout <<"rot: " << rot <<  "   bin: " << bin << std::endl;
+        // std::cout <<"rot: " << rot <<  "   bin: " << bin << std::endl;
         assert(bin>=0 && bin<HISTO_LENGTH);
         rotHist[bin].push_back(i); // 第i对匹配对
     }

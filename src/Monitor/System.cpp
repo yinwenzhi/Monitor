@@ -51,29 +51,28 @@ void System::TrackMonocular(const cv::Mat &im, const double &timestamp)
     #ifdef DEBUG
         std::cout << "get a image" << std::endl; 
     #endif
-    std::cout << "create frame" << std::endl; 
     Monitor::Frame::Ptr pFrame = Monitor::Frame::createFrame();// 局部变量
     // pFrame = Frame;   // 添加一次引用才能保持生命
-    std::cout << "pFrame :" << pFrame << std::endl ;
-    std::cout << "seting frame" << std::endl; 
-    std::cout << "mcamera_ " << &(mpTracker->mcamera_);
-    std::cout << "mcamera_fx" << mpTracker->mcamera_->fx_;
+    // std::cout << "pFrame :" << pFrame << std::endl ;
+    // std::cout << "seting frame" << std::endl; 
+    // std::cout << "mcamera_ " << &(mpTracker->mcamera_);
+    // std::cout << "mcamera_fx" << mpTracker->mcamera_->fx_;
     pFrame->camera_ = mpTracker->mcamera_;
-    std::cout << "seting frame" << std::endl; 
+    // std::cout << "seting frame" << std::endl; 
     pFrame->color_ = im;
     // pFrame->depth_ = depth;
     // pFrame->id_ = k++;
-    std::cout << "seting frame" << std::endl; 
+    // std::cout << "seting frame" << std::endl; 
     // pFrame->id_ = Tracking::mindex++;
-    std::cout << "seting frame" << std::endl; 
+    // std::cout << "seting frame" << std::endl; 
     pFrame->time_stamp_ = timestamp;
     mpTracker->mcurr_ = pFrame;
     #ifdef DEBUG
-        cout<<"begin AddFrame"<<endl;
+        // cout<<"begin AddFrame"<<endl;
     #endif
     mpTracker->AddFrame( pFrame );
     #ifdef DEBUG
-        cout<<"AddFrame end"<<endl;
+        // cout<<"AddFrame end"<<endl;
     #endif
     // AddFrame(mCurrentFrame);
 }

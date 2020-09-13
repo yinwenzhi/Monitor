@@ -27,7 +27,7 @@ using namespace std;
 using namespace cv;
 namespace Monitor
 {
-    //将旋转矩阵转换为欧拉角 欧拉角顺序为 x y z 
+    //将旋转矩阵转换为欧拉角 欧拉角顺序为 Z Y X 
     Vec3f rotationMatrixToEulerAngles(Mat &R)
     {
         // float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
@@ -50,8 +50,29 @@ namespace Monitor
         // x = x*(180/3.1415926);
         // y = y*(180/3.1415926);
         // z = z*(180/3.1415926);
-        return Vec3f(x, y, z);
+        return Vec3f(z, y, x);
     }
+
+    cv::Vec3f  rotationMatrixToEulerAnglesZYZ(Mat & R){
+        float S2 = sqrt(R.at<double>(2,0) * R.at<double>(2,0) +  R.at<double>(2,1) * R.at<double>(2,1) );
+        bool ismin = S2 < 1e-6; // If
+        float a, b, c;
+        if (!ismin) { // S2不接近0
+            b = atan2(S2,R.at<double>(2,2));
+            a = atan2(R.at<double>(1,2) , R.at<double>(0,2));
+            c = atan2(R.at<double>(2,1), -R.at<double>(2,0));
+        } else
+        {
+            a=0;
+            b = 0;
+            c = atan2(R.at<double>(2,1), -R.at<double>(2,0));
+        }
+        // a = a*(180/3.1415926);
+        // b = b*(180/3.1415926);
+        // c = c*(180/3.1415926);
+        return Vec3f(a, b, c);
+    }
+
     
     // Tracking::Tracking(std::shared_ptr<Monitor::Config>  ConfigInstance){
     Tracking::Tracking(Config::Ptr ConfigInstance){
@@ -382,12 +403,14 @@ namespace Monitor
 
         
         if(pts_3d.size()<4) {
+            cout<<"3d-2d pairs : "<<pts_3d.size() << " < 4 , skip this frame." << endl;
             return false;
-            cout<<"3d-2d pairs  "<<pts_3d.size() << " < 4 , skip this frame." << endl;
+        }else{
+            cout << "3d-2d pairs : " << pts_3d.size()  << endl;
         }
 
-        solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, SOLVEPNP_EPNP ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
-        // solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, CV_ITERATIVE ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
+        // solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, SOLVEPNP_EPNP ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
+        solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, CV_ITERATIVE ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
         std::cout << "旋转向量: " << std::endl << R << std::endl;
         cv::Rodrigues ( R, R ); // r为旋转向量形式，用Rodrigues公式转换为矩阵
 
@@ -402,9 +425,10 @@ namespace Monitor
         // cv::eigen2cv(rotation,rotation1);
  
         // Tracking::angle_= rotationMatrixToEulerAngles(rotation1);
-        Tracking::angle_= rotationMatrixToEulerAngles(R);
+        Tracking::angle_= rotationMatrixToEulerAnglesZYZ(R);
         cout << "rotation: " << std::endl << R << std::endl;
-        cout << "EulerAngles_: "<<angle_<<endl;
+        cout << "EulerAngles1_: "<<angle_<<endl;
+        cout << "EulerAngles2_: "<<angle_*52.7<<endl;
         
         
 
@@ -499,7 +523,7 @@ namespace Monitor
         // Eigen::Matrix3d temp =  rotation.inverse();
         // rotation = temp;
         cout<<"translation_ before: "<<trans(0) << " " << trans(1) << " "<<  trans(2) ;
-        trans = rotation.inverse()*((-1)*trans); // ** 坐标系变换  
+        trans = (-1)*(rotation.inverse()*trans); // ** 坐标系变换  
         Tracking::translation_=trans;
         cout <<" -->    translation_ after: "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
         cout << " distance: " << sqrt(translation_(0)*translation_(0)+translation_(1)*translation_(1)+translation_(2)*translation_(2));
