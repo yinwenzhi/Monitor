@@ -63,9 +63,9 @@ void ImageGrabber::View(cv::Mat image,bool& isstop){
   vector<cv::KeyPoint> curkeypts = mpSLAM->getCurKeyPoints();
   // vector<cv::KeyPoint> refkeypts = mpSLAM->getRefKeyPoints();
   
-// #define INITIAL
+// #define INITIAL 
 #ifdef INITIAL
-  // 显示参考帧
+  // 初始化时分批次显示参考帧
   namedWindow("refframe",0);
   cv::resizeWindow("refframe",640,480);
   // 3  5  7  9
@@ -107,6 +107,21 @@ void ImageGrabber::View(cv::Mat image,bool& isstop){
         }
       }
   }
+#endif
+#ifndef INITIAL
+    cv::Mat refimage = tracker->mref_->color_;
+    for(int i = 0; i < tracker->feature_matches_.size(); i++)
+    {
+        int n = tracker->feature_matches_[i].queryIdx;
+        //初始化随机种子
+        cv::RNG rng(cvGetTickCount());
+        CvScalar color = cv::Scalar(rng.uniform(0,255),rng.uniform(0,255),rng.uniform(0,255));
+        circle(refimage, tracker->keypoints_all_ref_[n].pt, 1, color, 2, 8, 0);
+        cv::putText(refimage,std::to_string(n), tracker->keypoints_all_ref_[n].pt, cv::FONT_HERSHEY_SIMPLEX,1, color,1,8);
+    }
+    circle(refimage, CvPoint(20,1000), 5, CV_RGB(255,0,255), 2, 8, 0);
+    // imshow("refframe",refimage);
+  
 #endif
 
   // 显示当前帧
@@ -152,6 +167,7 @@ void ImageGrabber::View(cv::Mat image,bool& isstop){
       tracker->feature_matches_, 
       img_goodmatch 
        );
+      cv::imwrite("image.png", image);
   }catch(exception e){
     cout << "draw this frame matchse failed,continue.";
 

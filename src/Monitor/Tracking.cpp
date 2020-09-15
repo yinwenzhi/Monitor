@@ -31,20 +31,20 @@ namespace Monitor
     Vec3f rotationMatrixToEulerAngles(Mat &R)
     {
         // float sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +  R.at<double>(1,0) * R.at<double>(1,0) );
-        float sy = sqrt(R.at<double>(2,1) * R.at<double>(2,1) +  R.at<double>(2,2) * R.at<double>(2,2) );
+        float Cy = sqrt(R.at<double>(2,1) * R.at<double>(2,1) +  R.at<double>(2,2) * R.at<double>(2,2) );
 
 
-        bool singular = sy < 1e-6; // If
+        bool singular = Cy < 1e-6; // If
 
 
         float x, y, z;
         if (!singular) {
             x = atan2(R.at<double>(2,1) , R.at<double>(2,2));
-            y = atan2(-R.at<double>(2,0), sy);
+            y = atan2(-R.at<double>(2,0), Cy);
             z = atan2(R.at<double>(1,0), R.at<double>(0,0));
         } else {
             x = atan2(-R.at<double>(1,2), R.at<double>(1,1));
-            y = atan2(-R.at<double>(2,0), sy);
+            y = atan2(-R.at<double>(2,0), Cy);
             z = 0;
         }
         // x = x*(180/3.1415926);
@@ -58,8 +58,8 @@ namespace Monitor
         bool ismin = S2 < 1e-6; // If
         float a, b, c;
         if (!ismin) { // S2不接近0
-            b = atan2(S2,R.at<double>(2,2));
             a = atan2(R.at<double>(1,2) , R.at<double>(0,2));
+            b = atan2(S2,R.at<double>(2,2));
             c = atan2(R.at<double>(2,1), -R.at<double>(2,0));
         } else
         {
@@ -305,6 +305,7 @@ namespace Monitor
         //计算当前帧位姿
         Mat R,t;
         if(!pose_estimation_3d2d(feature_matches_,R, t)){
+            state_ = LOST;
             return false;
         }
         //筛选匹配到的当前帧的特征点和描述子，
@@ -407,6 +408,7 @@ namespace Monitor
             return false;
         }else{
             cout << "3d-2d pairs : " << pts_3d.size()  << endl;
+            // cv::imwrite("matches.png", image_show);
         }
 
         // solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, SOLVEPNP_EPNP ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
@@ -414,8 +416,14 @@ namespace Monitor
         std::cout << "旋转向量: " << std::endl << R << std::endl;
         cv::Rodrigues ( R, R ); // r为旋转向量形式，用Rodrigues公式转换为矩阵
 
-        cout<<"before R=" << R <<endl;
-        cout<<"before t="<< endl << t <<endl;
+        // R = ( cv::Mat_<double> ( 3,3 ) << 1, 0, 0,
+        //       0, 1, 0,
+        //       0, 0, 1
+        // );
+        // t = ( cv::Mat_<double> ( 3,1 ) << 0, 0 , -1);
+        // t << 0, 0 , -1;
+        cout<<"beforeBA R=" << R <<endl;
+        cout<<"beforeBA t="<< endl << t <<endl;
         bundleAdjustment ( pts_3d, pts_2d, K, R, t );
 
         // cout<<"afterba R="<< endl << R <<endl;
@@ -425,8 +433,8 @@ namespace Monitor
         // cv::eigen2cv(rotation,rotation1);
  
         // Tracking::angle_= rotationMatrixToEulerAngles(rotation1);
-        Tracking::angle_= rotationMatrixToEulerAnglesZYZ(R);
-        cout << "rotation: " << std::endl << R << std::endl;
+        Tracking::angle_= rotationMatrixToEulerAngles(R);
+        cout << "afterBA R: " << std::endl << R << std::endl;
         cout << "EulerAngles1_: "<<angle_<<endl;
         cout << "EulerAngles2_: "<<angle_*52.7<<endl;
         
@@ -526,7 +534,7 @@ namespace Monitor
         trans = (-1)*(rotation.inverse()*trans); // ** 坐标系变换  
         Tracking::translation_=trans;
         cout <<" -->    translation_ after: "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
-        cout << " distance: " << sqrt(translation_(0)*translation_(0)+translation_(1)*translation_(1)+translation_(2)*translation_(2));
+        cout << " distance: " << sqrt(translation_(0)*translation_(0)+translation_(1)*translation_(1)+translation_(2)*translation_(2)) << endl;
         cv::eigen2cv(rotation,R);
         cv::eigen2cv(trans,t);
         // cout<<endl<<"after optimization:"<<endl;
