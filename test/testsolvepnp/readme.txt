@@ -1,0 +1,1 @@
+g++ testsolvepnp.cpp -o testpnp `pkg-config --cflags --libs opencv'
