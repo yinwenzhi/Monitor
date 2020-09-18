@@ -14,9 +14,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/features2d.hpp>
-// #include <opencv2/core/eigen.hpp>
-// #include <Eigen/Core>
-// #include <Eigen/Geometry>
+
 // #include <g2o/core/base_vertex.h>
 // #include <g2o/core/base_unary_edge.h>
 // #include <g2o/core/block_solver.h>
@@ -73,7 +71,36 @@ namespace Monitor
         return Vec3f(a, b, c);
     }
 
-    
+
+    double Tracking::reprojection_error(const Eigen::Matrix3d R , const Eigen::Vector3d t)
+    {
+        double sum = 0.0;
+        int number_of_correspondences = pts_3d_.size();
+        for(int i = 0; i < number_of_correspondences; i++) {
+            Eigen::Vector3d pw,pc ;
+            pw << pts_3d_[i].x , pts_3d_[i].y, pts_3d_[i].z ;
+            pc = R*pw + t;
+            double Xc = pc(0);
+            double Yc = pc(1);
+            double inv_Zc = 1.0 / pc(2);
+            double ue = mcamera_->cx_ + mcamera_->fx_ * Xc * inv_Zc;
+            double ve = mcamera_->cy_ + mcamera_->fy_ * Yc * inv_Zc;
+            double u = pts_2d_[i].x, v = pts_2d_[i].y;
+            cout << "pts_2d_[i].x, v = pts_2d_[i].y;"<< pts_2d_[i].x<< pts_2d_[i].y << endl;
+            int cursum = sqrt( (u - ue) * (u - ue) + (v - ve) * (v - ve) );
+            sum += cursum;
+            // for(int i=0 ;i<pw.size(); i++) cout << pw(i) << " " << endl;
+            // for(int i=0 ;i<pc.size(); i++) cout << pc(i) << " " << endl;
+            cout << "pw: " << pw << endl;
+            cout << "uv: " << ue <<"  "<< ve << endl; 
+            cout << "error: " << u-ue << "   " << v-ve << endl;
+            cout << "cursum: " << cursum << endl;
+            cout << "--------------" << endl;
+        }
+        cout << ">>>  reprojection_error : " << sum << endl;
+        return sum / number_of_correspondences;
+    }
+
     // Tracking::Tracking(std::shared_ptr<Monitor::Config>  ConfigInstance){
     Tracking::Tracking(Config::Ptr ConfigInstance){
         //初始化基准帧图片信息
@@ -172,12 +199,12 @@ namespace Monitor
         cout<<"descriptors :"<<descriptors.size()<<endl;
 
         // 设置Tracking 属性
-        Tracking::pts_3d_=pF_ini->pts_3d_ref_;
+        Tracking::pts_3d_map_=pF_ini->pts_3d_ref_;
         Tracking::keypoints_ref_ = keypoints;
         Tracking::keypoints_all_ref_ = keypoints_all;
-        Tracking::descriptors_ref_ = descriptors; // ref 3d坐标 keypoint
-        Tracking::descriptors_all_ref_ = descriptors_all; // ref all keyp
-        Tracking::mref_=pF_ini;
+        Tracking::descriptors_ref_ = descriptors;           // ref 3d keypoint descriptors
+        Tracking::descriptors_all_ref_ = descriptors_all;   // ref all keyp
+        Tracking::mref_ = pF_ini;
         return true;
     }
 
@@ -229,7 +256,7 @@ namespace Monitor
         for ( int i = 0; i < match.size(); i++ )
         {
             // feature_matches_.push_back ( match[i] );
-            if ( match[i].distance <= max ( 1.5*min_dist, 30.0 ) )
+            if ( match[i].distance <= max ( 2*min_dist, 30.0 ) )
             {
                 feature_matches_.push_back ( match[i] );
             }
@@ -276,20 +303,35 @@ namespace Monitor
         }
         feature_matches_ = matches_ransac;
         cout<<"matches.size() after ransac= "<<feature_matches_.size()<<endl;
+        // ransanc 结束
+
+        namedWindow("add_frame_match",0);
+        cv::resizeWindow("add_frame_match",1280,480);
+        cv::Mat add_frame_match;
+        drawMatches ( 
+            mref_->color_,                  // 参考帧图像
+            keypoints_all_ref_,           // 因为匹配使用描述子是所有特征点的描述子
+            mcurr_->color_,                             // 当前帧图像
+            keypoints_curr_, 
+            feature_matches_, 
+            add_frame_match
+        );
+        imshow("add_frame_match",add_frame_match);
+
 
         // 使用已知3D点的序号来进行提取feature_matches_
         vector<cv::DMatch> good_matchs;
-        std::map<int,cv::Point3f>::iterator it=Tracking::pts_3d_.begin();
+        std::map<int,cv::Point3f>::iterator it=Tracking::pts_3d_map_.begin();
 
-        for(;it!=Tracking::pts_3d_.end();it++)
+        for(;it!=Tracking::pts_3d_map_.end();it++)
         {
             cout << " pF_ini->pts_3d_ref_ id : " << it->first << " point: "<< it->second << endl;
         }
-        it=Tracking::pts_3d_.begin();
+        it=Tracking::pts_3d_map_.begin();
 
         int matchindex = 0; 
         // 对每一个匹配对判断 是不是 3d点序列的一个序号
-        while(matchindex<feature_matches_.size() && it!=Tracking::pts_3d_.end()){
+        while(matchindex<feature_matches_.size() && it!=Tracking::pts_3d_map_.end()){
             // cout <<"queryIdx:"<<feature_matches_[matchindex].queryIdx<<"    cur3d->first: " << it->first  << endl;
             if(feature_matches_[matchindex].queryIdx < it->first) matchindex++;
             else if (feature_matches_[matchindex].queryIdx > it->first) it++;
@@ -382,17 +424,17 @@ namespace Monitor
         cout<<"match cost time: "<<timer.elapsed()<<endl;
     }
 
-    bool Tracking:: pose_estimation_3d2d (std::vector< DMatch > matches,Mat& R, Mat& t )
+    bool Tracking:: pose_estimation_3d2d (std::vector<DMatch> matches,Mat& R, Mat& t )
     {
-        cout<<"ref_->pts_3d_ref_.size:"<<pts_3d_.size()<<endl;
+        cout<<"ref_->pts_3d_ref_.size:"<<pts_3d_map_.size()<<endl;
         //Mat K = f_cur.camera_->K;
         Mat K = ( Mat_<double> ( 3,3 ) << mcamera_->fx_, 0, mcamera_->cx_, 0, mcamera_->fy_, mcamera_->cy_, 0, 0, 1 );
         vector<Point3f> pts_3d;
         vector<Point2f> pts_2d;
         for ( DMatch m:matches )
         {
-            // 这里使用匹配点在参考帧上的序号来获得3D点的序号，所以 pts_3d_ 保存为map ，通过序号获得坐标值
-            Point3f p1 = pts_3d_[m.queryIdx]; 
+            // 这里使用匹配点在参考帧上的序号来获得3D点的序号，所以 pts_3d_map_ 保存为map ，通过序号获得坐标值
+            Point3f p1 = pts_3d_map_[m.queryIdx]; 
             pts_3d.push_back (p1);
             pts_2d.push_back ( keypoints_curr_[m.trainIdx].pt );
             std::cout << "3d， id： " << m.queryIdx << " point: " << p1 <<  "  2d.point: "<< keypoints_curr_[m.trainIdx].pt << endl;
@@ -402,17 +444,21 @@ namespace Monitor
             // cout<<"2d= "<<keypoints_curr_[m.trainIdx].pt<<endl;
         }
 
-        
-        if(pts_3d.size()<4) {
-            cout<<"3d-2d pairs : "<<pts_3d.size() << " < 4 , skip this frame." << endl;
+        int minp3dSize = 5;
+        if( pts_3d.size() < minp3dSize) {
+            cout<<"3d-2d pairs : "<<pts_3d.size() << " < " << minp3dSize <<" , skip this frame." << endl;
+            Tracking::pts_3d_.clear();
+            Tracking::pts_2d_.clear();
             return false;
         }else{
             cout << "3d-2d pairs : " << pts_3d.size()  << endl;
+            Tracking::pts_3d_ = pts_3d;
+            Tracking::pts_2d_ = pts_2d;
             // cv::imwrite("matches.png", image_show);
         }
 
-        // solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, SOLVEPNP_EPNP ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
-        solvePnP ( pts_3d, pts_2d, K, Mat(), R, t, false, CV_ITERATIVE ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
+        solvePnP( pts_3d, pts_2d, K, Mat(), R, t, false, SOLVEPNP_EPNP ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
+        // solvePnP(pts_3d, pts_2d, K, Mat(), R, t, false, CV_ITERATIVE ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
         std::cout << "旋转向量: " << std::endl << R << std::endl;
         cv::Rodrigues ( R, R ); // r为旋转向量形式，用Rodrigues公式转换为矩阵
 
@@ -424,26 +470,26 @@ namespace Monitor
         // t << 0, 0 , -1;
         cout<<"beforeBA R=" << R <<endl;
         cout<<"beforeBA t="<< endl << t <<endl;
-        bundleAdjustment ( pts_3d, pts_2d, K, R, t );
+        if( !bundleAdjustment ( pts_3d, pts_2d, K, R, t ) ) return false; 
 
-        // cout<<"afterba R="<< endl << R <<endl;
-        // cout<<"afterba t="<< endl << t <<endl;
 
+        cout << "afterBA R="<< endl << R <<endl;
+        // cout<<"afterBA t="<< endl << t <<endl;
         // Mat rotation1;
         // cv::eigen2cv(rotation,rotation1);
  
-        // Tracking::angle_= rotationMatrixToEulerAngles(rotation1);
-        Tracking::angle_= rotationMatrixToEulerAngles(R);
-        cout << "afterBA R: " << std::endl << R << std::endl;
+        // Tracking::angle_ = rotationMatrixToEulerAngles(rotation1);
+        Tracking::angle_ = rotationMatrixToEulerAngles(R);
         cout << "EulerAngles1_: "<<angle_<<endl;
         cout << "EulerAngles2_: "<<angle_*52.7<<endl;
         
+
         
 
         return true;
     }
 
-    void  Tracking::bundleAdjustment (
+    bool  Tracking::bundleAdjustment (
             const vector< Point3f > points_3d,
             const vector< Point2f > points_2d,
             const Mat& K,
@@ -523,8 +569,15 @@ namespace Monitor
         T_esti=Eigen::Isometry3d ( pose->estimate() ).matrix();
         Eigen::Matrix4d tt=T_esti.matrix();
         // std::cout << "tt: " <<std::endl << tt<< std::endl;
-        Eigen::Matrix3d rotation=tt.block(0,0,3,3);
-        Eigen::Vector3d trans=tt.block(0,3,3,1);
+        Eigen::Matrix3d rotation = tt.block(0,0,3,3);
+        Eigen::Vector3d trans = tt.block(0,3,3,1);
+        
+        //重投影误差
+        // reprojection_error(rotation,trans);
+        if (reprojection_error(rotation,trans)>10.0) {
+            cout << "\033[1;33 m >>> reprojection_error high, continue. \033[0m"  << endl;
+            return false;
+        }
 
         // Eigen::Vector3d trans=tt.block(0,3,3,0);
         // Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> trans=tt.block(0,3,3,1);
@@ -532,13 +585,14 @@ namespace Monitor
         // rotation = temp;
         cout<<"translation_ before: "<<trans(0) << " " << trans(1) << " "<<  trans(2) ;
         trans = (-1)*(rotation.inverse()*trans); // ** 坐标系变换  
-        Tracking::translation_=trans;
+        Tracking::translation_ = trans;
         cout <<" -->    translation_ after: "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
         cout << " distance: " << sqrt(translation_(0)*translation_(0)+translation_(1)*translation_(1)+translation_(2)*translation_(2)) << endl;
         cv::eigen2cv(rotation,R);
         cv::eigen2cv(trans,t);
         // cout<<endl<<"after optimization:"<<endl;
         // cout<<"T="<<endl<<Eigen::Isometry3d ( pose->estimate() ).matrix() <<endl;
+        return true;
  
     }
 
