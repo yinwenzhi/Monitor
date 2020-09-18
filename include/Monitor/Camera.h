@@ -16,6 +16,7 @@ namespace Monitor
     public:
         typedef std::shared_ptr<Camera> Ptr;
         float   fx_, fy_, cx_, cy_;
+        float   k1_, k2_, k3_, p1_, p2_;
         static float invfx;
         static float invfy;
         cv::Mat mDistCoef;
@@ -24,6 +25,7 @@ namespace Monitor
         // Number of KeyPoints.
         int N; ///< KeyPoints数量
         Mat K;
+        Mat D;
     public:
         Camera(std::shared_ptr<Monitor::Config>  ConfigInstance);
         Camera( float fx, float fy, float cx, float cy) :

@@ -35,24 +35,14 @@ class ImageGrabber {
 };
 
 void ImageGrabber::GrabMono(const cv::Mat& img, double timeStamp){
-  if (do_rectify) {
-    cv::Mat _img;
 
-    cv::remap(
-      img,                  // 输入图像
-      _img,                 // 输出图像
-      M1,                   // 两种可能  1 xy 的地一个映射  2 表示CV_16SC2 ..
-      M2,                   // 两种可能   1 对上M1的第一种时 无任何  2  CV_16UC1 ..
-      cv::INTER_LINEAR      // 插值方式 
-      );
+  // std::cout << " 矫正后 跟踪" << std::endl;
+  // mpSLAM->TrackMonocular(_img, timeStamp);
 
-    // std::cout << " 矫正后 跟踪" << std::endl;
-    mpSLAM->TrackMonocular(_img, timeStamp);
-  } else {
-    //std::cout << " 直接 跟踪" << std::endl;
+  //std::cout << " 直接 跟踪" << std::endl;
 
-    mpSLAM->TrackMonocular(img, timeStamp);
-  }
+  mpSLAM->TrackMonocular(img, timeStamp);
+  
 }
 
 void ImageGrabber::View(cv::Mat image,bool& isstop){
@@ -161,7 +151,6 @@ void ImageGrabber::View(cv::Mat image,bool& isstop){
       drawMatches ( 
       tracker->mref_->color_,             // 参考帧图像
       tracker->keypoints_all_ref_,        // 因为匹配使用描述子是所有特征点的描述子
-      // tracker->keypoints_ref_,        // 因为匹配使用描述子是所有只有3d的描述子
       image,                              // 当前帧图像
       tracker->keypoints_curr_, 
       tracker->feature_matches_, 
@@ -244,20 +233,18 @@ int main(int argc, char** argv) {
     if (igb.do_rectify) {
       std::cout << "loading rectify settings..." << std::endl;
 
+
       cv::Mat K, P, R, D;
-      fsSetting["K"] >> K;
-
-      fsSetting["P"] >> P;
-
-      fsSetting["R"] >> R;
-
-      fsSetting["D"] >> D;
-
+      K = (Mat_<float> ( 3,3 ) << float(fsSetting["Camera.fx"]), 0, float(fsSetting["Camera.cx"]), 0, float(fsSetting["Camera.fy"]), float(fsSetting["Camera.cy"]), 0, 0, 1 );
+      D = (Mat_<float> ( 1,5 ) << float(fsSetting["Camera.k1"]), float(fsSetting["Camera.k2"]), float(fsSetting["Camerak3"]), float(fsSetting["Camera.p1"]), float(fsSetting["Camera.p2"]) );
+      P = K;
+      
       int rows = fsSetting["height"];
       int cols = fsSetting["width"];
-
-      if(K.empty()  || P.empty() || R.empty()  ||  D.empty() ||
-                  rows==0 || cols ==0)	{
+      cout << K << endl;
+      cout << D << endl;
+      cout << rows << cols << endl;
+      if(K.empty()||  D.empty() || rows==0 || cols ==0)	{
         std::cerr << "error: calibration parameters to rectify image are missing!" << std::endl;
         return -1;
       }
@@ -304,15 +291,26 @@ int main(int argc, char** argv) {
       cv::Mat image_data; // 创建图像对象 用于存储每一帧的图像
       camera.GetImage(image_data); 
 
-      if (image_data.channels() >= 3) {
-        // cv::cvtColor(image_data,image_data,cv::COLOR_RGB2GRAY);
-      }
+      // if (image_data.channels() >= 3) {
+      //   cv::cvtColor(image_data,image_data,cv::COLOR_RGB2GRAY);
+      // }
 
       try{
+        imshow("image_data",image_data);
+        if (igb.do_rectify) {
+          cv::Mat _img;
+          cv::remap(
+            image_data,                  // 输入图像
+            image_data,                 // 输出图像
+            igb.M1,                   // 两种可能  1 xy 的地一个映射  2 表示CV_16SC2 ..
+            igb.M2,                   // 两种可能   1 对上M1的第一种时 无任何  2  CV_16UC1 ..
+            cv::INTER_LINEAR      // 插值方式 
+            );
+        }
         igb.GrabMono(image_data,0.00001f);
       }catch(exception e){
         cout << "process this frame failed,continue.";
-
+        continue;
       }
       
       // // 绘制并显示图像

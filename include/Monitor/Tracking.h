@@ -1,7 +1,8 @@
 //
 // Created by lizechuan on 20-7-13.
 //
-// #include "common_include.h"
+#ifndef TRACKING_H
+#define TRACKING_H
 #include "Frame.h"
 #include "Feature.h"
 #include "Camera.h"
@@ -16,8 +17,6 @@
 #include <g2o/core/optimization_algorithm_levenberg.h>
 #include <g2o/solvers/csparse/linear_solver_csparse.h>
 #include <g2o/types/sba/types_six_dof_expmap.h>
-#ifndef TRACKING_H
-#define TRACKING_H
 
 using Eigen::Vector2d;
 using Eigen::Vector3d;
@@ -33,6 +32,30 @@ namespace Monitor
     class Tracking
     {
     public:
+        Camera::Ptr mcamera_;  
+        Frame::Ptr mpCurrentFrame;  
+        string mbase_img_path;
+        bool mbbase_initialed;
+        size_t mindex;   // use to set frame id 
+        
+        vector<cv::KeyPoint>    keypoints_all_ref_;   // keypoints (all) in ref frame
+        vector<cv::KeyPoint>    keypoints_ref_;       // keypoints (just 3d point) in ref frame
+        vector<cv::KeyPoint>    keypoints_curr_;      // keypoints in current frame
+        vector<cv::DMatch>      feature_matches_;     // feature matches
+        cv::FlannBasedMatcher   matcher_flann_;       // flann matcher
+        cv::Mat                 descriptors_all_ref_; // descriptor in reference frame for all keypoint
+        cv::Mat                 descriptors_ref_;     // descriptor in reference frame for 3d keypoint
+        cv::Mat                 descriptors_curr_;    // descriptor in current frame
+
+        map<int,cv::Point3f>    pts_3d_map_;   // 3d点在参考帧特征点中的序号以及坐标
+        vector<cv::Point3f>     pts_3d_;       // 3d点
+        vector<cv::Point2f>     pts_2d_;       // 3d点对应的当前帧2d像素坐标
+        Eigen::Isometry3d       T_esti;        // 当前帧相机欧式变换矩阵 BA优化后
+        Eigen::Vector3d         translation_;  // 当前帧相机在世界坐标系中的平移向量
+        cv::Vec3f               angle_;        // 当前帧欧拉角
+
+
+        // others not used
         typedef shared_ptr<Tracking> Ptr;
         enum VOState {
             INITIALIZING=-1,
@@ -44,29 +67,12 @@ namespace Monitor
         cv::Ptr<cv::ORB> orb_;                        // orb detector and computer
         // vector<cv::Point3f>     pts_3d_ref_;          // 3d points in reference frame
         // unordered_map<int,cv::Point3f>    pts_3d_ref_;
-        vector<cv::KeyPoint>    keypoints_all_ref_;   // keypoints (all) in ref frame
-        vector<cv::KeyPoint>    keypoints_ref_;       // keypoints (just 3d point) in ref frame
-        vector<cv::KeyPoint>    keypoints_curr_;      // keypoints in current frame
-        Mat                     descriptors_all_ref_;
-        Mat                     descriptors_curr_;    // descriptor in current frame
-        Mat                     descriptors_ref_;     // descriptor in reference frame
-        vector<cv::DMatch>      feature_matches_;     // feature matches
-        cv::FlannBasedMatcher   matcher_flann_;       // flann matcher
         Frame * firstf_;  
         Frame::Ptr mref_;                             // reference key-frame
         Frame::Ptr mcurr_;                            // current frame
-        Frame::Ptr mpCurrentFrame;  
         Frame::Ptr mprefFrame;  
           
         // vector< Point3f >              pts_3d_;       // Tracking->pts_3d_=pF_ini->pts_3d_ref_;
-        map<int,cv::Point3f>  pts_3d_;
-        Camera::Ptr                    mcamera_;  
-        Eigen::Isometry3d              T_esti;        // 欧式变换矩阵
-        cv::Vec3f                      angle_;        // 欧拉角
-        Eigen::Vector3d                translation_;
-        string mbase_img_path;
-        bool mbbase_initialed;
-        size_t mindex;   // use to set frame id 
     public:
         // Tracking(Monitor::Config * ConfigInstance);
         Tracking(std::shared_ptr<Monitor::Config> ConfigInstance);
@@ -78,11 +84,12 @@ namespace Monitor
         void computeDescriptors();
         void featureMatching();
         bool pose_estimation_3d2d ( std::vector< DMatch > matches,Mat& R, Mat& t );
-        void bundleAdjustment (
+        bool bundleAdjustment (
                 const vector< Point3f > points_3d,
                 const vector< Point2f > points_2d,
                 const Mat& K,
                 Mat& R, Mat& t );
+        double reprojection_error(const Eigen::Matrix3d R , const Eigen::Vector3d t);
 
     };
 } //namespace Monitor

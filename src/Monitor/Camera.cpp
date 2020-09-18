@@ -19,7 +19,6 @@ namespace Monitor
     // }
     Camera::Camera(std::shared_ptr<Monitor::Config>  ConfigInstance){
         fx_ = ConfigInstance->get<float>("Camera.fx");
-        // fx_ = ConfigInstance->get<float> ("dataset_first");
         fy_ = ConfigInstance->get<float>("Camera.fy");
         cx_ = ConfigInstance->get<float>("Camera.cx");
         cy_ = ConfigInstance->get<float>("Camera.cy");
@@ -27,6 +26,13 @@ namespace Monitor
                 0, fy_, cy_,
                 0,0,1
         );
+
+        k1_ = ConfigInstance->get<float>("Camera.k1");
+        k2_ = ConfigInstance->get<float>("Camera.k2");
+        k3_ = ConfigInstance->get<float>("Camera.k3");
+        p1_ = ConfigInstance->get<float>("Camera.p1");
+        p2_ = ConfigInstance->get<float>("Camera.p2");
+        D = (cv::Mat_<double> (5,1) << k1_, k2_, p1_, p2_, k3_ );
         cout<<"camera parameters is load"<<endl;        
     }
     
