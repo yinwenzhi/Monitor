@@ -4,22 +4,30 @@
 
 is_use_camera_device: true
 #first frame修改为自己的路径
-dataset_first: /home/emast/WorkSpace/programe/20200904Monitor/dataset/logo/picture/11.jpg
+dataset_first: /home/emast/WorkSpace/programe/Monitor/dataset/logo/picture/11.jpg
 
 #txtfile record dataset_images_list
-dataset_images_list: /home/emast/WorkSpace/programe/20200904Monitor/dataset/logo/img.txt
+dataset_images_list: /home/emast/WorkSpace/programe/Monitor/dataset/logo/img.txt
 
 #image stream 
-dataset_images: /home/emast/WorkSpace/programe/20200904Monitor/dataset/logo/picture/
+dataset_images: /home/emast/WorkSpace/programe/Monitor/dataset/logo/picture/
 
 #3d points
-dataset_3d: /home/emast/WorkSpace/programe/20200904Monitor/dataset/logo/point2.txt
+dataset_3d: /home/emast/WorkSpace/programe/Monitor/dataset/logo/point2.txt
 # camera intrinsics
 
-Camera.fx: 5059.9
-Camera.fy: 5055.1
-Camera.cx: 599.1741
-Camera.cy: 396.5086
+Camera.fx: 5623.12437212257
+Camera.fy: 5540.03746353488
+Camera.cx: -459.011105815336
+Camera.cy: 1046.8715959683
+
+Camera.k1: -0.415455277179585
+Camera.k2: 0.886632810694376
+
+Camera.p1: 0
+Camera.p2: 0
+
+
 
 # fr2
 #camera.fx: 520.9
