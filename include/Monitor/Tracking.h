@@ -38,18 +38,23 @@ namespace Monitor
         bool mbbase_initialed;
         size_t mindex;   // use to set frame id 
         
+        cv::FlannBasedMatcher   matcher_flann_;       // flann matcher
+        vector<cv::DMatch>      feature_matches_;     // feature matches
+        // 参考帧
         vector<cv::KeyPoint>    keypoints_all_ref_;   // keypoints (all) in ref frame
         vector<cv::KeyPoint>    keypoints_ref_;       // keypoints (just 3d point) in ref frame
-        vector<cv::KeyPoint>    keypoints_curr_;      // keypoints in current frame
-        vector<cv::DMatch>      feature_matches_;     // feature matches
-        cv::FlannBasedMatcher   matcher_flann_;       // flann matcher
         cv::Mat                 descriptors_all_ref_; // descriptor in reference frame for all keypoint
         cv::Mat                 descriptors_ref_;     // descriptor in reference frame for 3d keypoint
-        cv::Mat                 descriptors_curr_;    // descriptor in current frame
-
         map<int,cv::Point3f>    pts_3d_map_;   // 3d点在参考帧特征点中的序号以及坐标
-        vector<cv::Point3f>     pts_3d_;       // 3d点
-        vector<cv::Point2f>     pts_2d_;       // 3d点对应的当前帧2d像素坐标
+        vector<cv::Point3f>     pts_3d_;       // 3d点坐标
+        
+        // last
+        Eigen::Vector3d         lasttranslation_;
+
+        // 当前帧
+        vector<cv::KeyPoint>    keypoints_curr_;      // keypoints in current frame
+        cv::Mat                 descriptors_curr_;    // descriptor in current frame
+        vector<cv::Point2f>     pts_2d_;       // 参考帧中3d点对应的当前帧2d像素坐标
         Eigen::Isometry3d       T_esti;        // 当前帧相机欧式变换矩阵 BA优化后
         Eigen::Vector3d         translation_;  // 当前帧相机在世界坐标系中的平移向量
         cv::Vec3f               angle_;        // 当前帧欧拉角
@@ -69,6 +74,7 @@ namespace Monitor
         // unordered_map<int,cv::Point3f>    pts_3d_ref_;
         Frame * firstf_;  
         Frame::Ptr mref_;                             // reference key-frame
+        Frame::Ptr mlast_;
         Frame::Ptr mcurr_;                            // current frame
         Frame::Ptr mprefFrame;  
           

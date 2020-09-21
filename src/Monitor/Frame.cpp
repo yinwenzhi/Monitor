@@ -17,10 +17,13 @@ namespace Monitor
     // {
 
     // }
-    Frame::Frame ( long id, double time_stamp){}
+    Frame::Frame ( long id){
+        translation_ = Eigen::Vector3d::Zero();
+        distance_ = 0.0;
+    }
     Frame::~Frame()
     {
-
+        // todo 
     }
 
     Frame::Ptr Frame::createFrame()

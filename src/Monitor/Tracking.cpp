@@ -147,7 +147,7 @@ namespace Monitor
         pF_ini->color_ = img1;//读取图片
         pF_ini->time_stamp_ = 0;//时间戳
         pF_ini->id_=0;
-        // //  读入基准帧的3D点坐标（夹板坐标系下）
+        // 读入基准帧的3D点坐标（夹板坐标系下）
         vector<KeyPoint> keypoints;//和3d点对应的特征点
         Mat descriptors;//和3d点对应的描述子
         // 从文档中读取3D坐标
@@ -205,22 +205,36 @@ namespace Monitor
         Tracking::descriptors_ref_ = descriptors;           // ref 3d keypoint descriptors
         Tracking::descriptors_all_ref_ = descriptors_all;   // ref all keyp
         Tracking::mref_ = pF_ini;
+
+        mcurr_ =  mref_;
+
         return true;
     }
 
     // bool Tracking::AddFrame ( Frame::Ptr frame ,double time=0)//计算了每一帧的位姿
-    bool Tracking::AddFrame (Monitor::Frame::Ptr  frame )//计算了每一帧的位姿
+    bool Tracking::AddFrame(Monitor::Frame::Ptr  frame )//计算了每一帧的位姿
     {
+        // mpTracker->mlast_ = mpTracker-> mcurr_;
+        // cout << "**********mpTracker->mlast_->translation_*********" << mpTracker->mlast_->translation_ << endl;
+        // mpTracker->mcurr_ = pFrame;
+
+        // mlast_ = Frame::Ptr(&(*mcurr_));
+        mlast_ = mcurr_;
+        mcurr_ = frame;
+        mcurr_->translation_  = mlast_ -> translation_; // 先复制上一帧的平移，防止这一帧计算过程跳出。
+        mcurr_->distance_ = mlast_ -> distance_;
+        cout << "mlast_ : " << mlast_ << "  mcurr_: " << mcurr_ << endl;
+        cout <<"mlast_->distance_: " << mlast_->distance_ << endl;
+
+
+        // Monitor::Frame::Ptr pF_cur = Monitor::Frame::createFrame();
         #ifdef DEBUG
             cout<<"AddFrame"<<endl;
         #endif
-        cout<<"AddFramebeging"<<endl;
-        // mcurr_ = frame;
-        cout<<"featurebeging"<<endl;
         Feature f;
-        cout<<"getCrossbeging"<<endl;
         f.GetKeyPoint(mcurr_->color_);  //提取特征点
-        KeyPoint::convert(f._corners, keypoints_curr_);//类型转换
+        KeyPoint::convert(f._corners, keypoints_curr_); //类型转换
+        mcurr_ -> keypoints_ = keypoints_curr_;
         cout<<"keypoints_curr_.size()"<<keypoints_curr_.size()<<endl;
 
         boost::timer timer;
@@ -230,12 +244,14 @@ namespace Monitor
 
         //当前帧提取描述子
         descriptor->compute ( mcurr_->color_, keypoints_curr_, descriptors_curr_ );
+        mcurr_ -> descriptors_ = descriptors_curr_;
+
         cv::Ptr<DescriptorMatcher> matcher  = DescriptorMatcher::create ( "BruteForce-Hamming" );
         // 第一步 使用 keypoints_all_ref_ 匹配
         matcher->match ( descriptors_all_ref_, descriptors_curr_, match );
         // 使用 keypoints_all_ref_ 匹配
         // matcher->match ( descriptors_ref_, descriptors_curr_, match );
-        cout<<"match.size()= "<<match.size()<<endl;
+        cout<<"match.size()= "<< match.size()<<endl;
 
         double min_dist=10000, max_dist=0;
         //找出所有匹配之间的最小距离和最大距离, 即是最相似的和最不相似的两组点之间的距离
@@ -247,8 +263,8 @@ namespace Monitor
             if ( dist > max_dist ) max_dist = dist;
         }
 
-        printf ( "-- Max dist : %f \n", max_dist );
-        printf ( "-- Min dist : %f \n", min_dist );
+        printf( "-- Max dist : %f \n", max_dist );
+        printf( "-- Min dist : %f \n", min_dist );
 
         feature_matches_.clear(); //featurematch 信息要用来绘制匹配图
         //当描述子之间的距离大于两倍的最小距离时,即认为匹配有误.但有时候最小距离会非常小,设置一个经验值30作为下限.
@@ -308,7 +324,7 @@ namespace Monitor
         namedWindow("add_frame_match",0);
         cv::resizeWindow("add_frame_match",1280,480);
         cv::Mat add_frame_match;
-        drawMatches ( 
+        drawMatches( 
             mref_->color_,                  // 参考帧图像
             keypoints_all_ref_,           // 因为匹配使用描述子是所有特征点的描述子
             mcurr_->color_,                             // 当前帧图像
@@ -343,7 +359,7 @@ namespace Monitor
         }
         feature_matches_ = good_matchs;
         cout<<"matches.size() after 3d= "<<feature_matches_.size()<<endl;
-
+        mcurr_-> feature_matches_ = feature_matches_;
         //计算当前帧位姿
         Mat R,t;
         if(!pose_estimation_3d2d(feature_matches_,R, t)){
@@ -429,6 +445,7 @@ namespace Monitor
         cout<<"ref_->pts_3d_ref_.size:"<<pts_3d_map_.size()<<endl;
         //Mat K = f_cur.camera_->K;
         Mat K = ( Mat_<double> ( 3,3 ) << mcamera_->fx_, 0, mcamera_->cx_, 0, mcamera_->fy_, mcamera_->cy_, 0, 0, 1 );
+        Mat D = ( Mat_<float> ( 5,1 ) << mcamera_->k1_, mcamera_->k2_, 0, mcamera_->p1_, mcamera_->p2_ );
         vector<Point3f> pts_3d;
         vector<Point2f> pts_2d;
         for ( DMatch m:matches )
@@ -457,8 +474,9 @@ namespace Monitor
             // cv::imwrite("matches.png", image_show);
         }
 
-        solvePnP( pts_3d, pts_2d, K, Mat(), R, t, false, SOLVEPNP_EPNP ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
-        // solvePnP(pts_3d, pts_2d, K, Mat(), R, t, false, CV_ITERATIVE ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
+        solvePnP( pts_3d, pts_2d, K, D, R, t, false, SOLVEPNP_EPNP ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
+        // solvePnP(pts_3d, pts_2d, K, D, R, t, false, CV_ITERATIVE ); // 调用OpenCV 的 PnP 求解，可选择EPNP，DLS等方法
+        // solvePnP(pts_3d, pts_2d, K, Mat(), R, t, false, CV_ITERATIVE )
         std::cout << "旋转向量: " << std::endl << R << std::endl;
         cv::Rodrigues ( R, R ); // r为旋转向量形式，用Rodrigues公式转换为矩阵
 
@@ -567,6 +585,7 @@ namespace Monitor
         cout<<"optimization costs time: "<<time_used.count() <<" seconds."<<endl;
         
         T_esti=Eigen::Isometry3d ( pose->estimate() ).matrix();
+
         Eigen::Matrix4d tt=T_esti.matrix();
         // std::cout << "tt: " <<std::endl << tt<< std::endl;
         Eigen::Matrix3d rotation = tt.block(0,0,3,3);
@@ -574,8 +593,8 @@ namespace Monitor
         
         //重投影误差
         // reprojection_error(rotation,trans);
-        if (reprojection_error(rotation,trans)>10.0) {
-            cout << "\033[1;33 m >>> reprojection_error high, continue. \033[0m"  << endl;
+        if (reprojection_error(rotation,trans)>20.0) {
+            cout << "\033[1;33m>>> reprojection_error too large, continue.\033[0m"  << endl;
             return false;
         }
 
@@ -584,10 +603,24 @@ namespace Monitor
         // Eigen::Matrix3d temp =  rotation.inverse();
         // rotation = temp;
         cout<<"translation_ before: "<<trans(0) << " " << trans(1) << " "<<  trans(2) ;
-        trans = (-1)*(rotation.inverse()*trans); // ** 坐标系变换  
-        Tracking::translation_ = trans;
-        cout <<" -->    translation_ after: "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
-        cout << " distance: " << sqrt(translation_(0)*translation_(0)+translation_(1)*translation_(1)+translation_(2)*translation_(2)) << endl;
+        trans = (-1)*(rotation.inverse()*trans); // 坐标系变换  
+        Tracking::translation_ = trans; // 更新tracking 后续将删除，只保留frame中的
+        mcurr_ -> translation_ = trans; // 更新frame
+        cout <<" -->  translation_ after: "<<translation_(0) << " " << translation_(1) << " "<<  translation_(2)<<endl;
+
+        // 平滑
+        double s1 = 0.2, s2 = 0.8;
+        // translation_(0) = trans(0)*s1 + mlast_->translation_(0)*s2;
+        // translation_(1) = trans(1)*s1 + mlast_->translation_(1)*s1;
+        // translation_(2) = trans(2)*s1 + mlast_->translation_(2)*s1;
+        // cout <<"mcurr_->translation_: " << mcurr_->translation_ << endl;
+        // cout <<"mlast_->translation_: " << mlast_->translation_ << endl;
+        double distance = sqrt(translation_(0)*translation_(0)+translation_(1)*translation_(1)+translation_(2)*translation_(2));
+        cout <<"distance: filter before: "<< distance <<endl;
+        distance = distance*s1 + mlast_->distance_*s2;
+        cout <<"distance: filter after : "<< distance <<endl;
+
+        mcurr_-> distance_ = distance;
         cv::eigen2cv(rotation,R);
         cv::eigen2cv(trans,t);
         // cout<<endl<<"after optimization:"<<endl;

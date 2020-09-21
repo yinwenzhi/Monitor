@@ -131,8 +131,9 @@ void ImageGrabber::View(cv::Mat image,bool& isstop){
     cv::putText(image,std::to_string(b), num2, cv::FONT_HERSHEY_SIMPLEX,1, CV_RGB(255,0, 0),1,8);
   }
   cv::putText(image,"distance: ", cv::Point2f(a1,260), cv::FONT_HERSHEY_SIMPLEX,0.60, CV_RGB(255,0, 0),1,8);
-  cv::putText(image,std::to_string(sqrt(trans(0)*trans(0)+trans(1)*trans(1)+trans(2)*trans(2))),
-     cv::Point2f(a1+300,260), cv::FONT_HERSHEY_SIMPLEX,1, CV_RGB( 255,0, 0),1,8);
+  cv::putText(image,std::to_string(tracker->mcurr_->distance_),
+     cv::Point2f(a1+300,260), 
+     cv::FONT_HERSHEY_SIMPLEX,1, CV_RGB( 255,0, 0),1,8);
 
   std::cout <<  " curkeypts.size()" << curkeypts.size() << std::endl;
   for(size_t n = 0; n < curkeypts.size(); n++)

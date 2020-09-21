@@ -66,14 +66,9 @@ void System::TrackMonocular(const cv::Mat &im, const double &timestamp)
     // pFrame->id_ = Tracking::mindex++;
     // std::cout << "seting frame" << std::endl; 
     pFrame->time_stamp_ = timestamp;
-    mpTracker->mcurr_ = pFrame;
-    #ifdef DEBUG
-        // cout<<"begin AddFrame"<<endl;
-    #endif
-    mpTracker->AddFrame( pFrame );
-    #ifdef DEBUG
-        // cout<<"AddFrame end"<<endl;
-    #endif
+
+
+    mpTracker->AddFrame(pFrame);
     // AddFrame(mCurrentFrame);
 }
 
